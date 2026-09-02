@@ -1,0 +1,869 @@
+import React, { useState } from 'react';
+import { 
+  Users, 
+  Plus, 
+  Edit3, 
+  Trash2, 
+  UserPlus, 
+  Search, 
+  ArrowRightLeft, 
+  CheckCircle2, 
+  XCircle, 
+  MoreVertical,
+  School,
+  Sparkles,
+  AlertTriangle
+} from 'lucide-react';
+import { Group, Student, StudentStatus } from '../types';
+import { dbService } from '../db/databaseService';
+
+interface GroupsStudentsScreenProps {
+  groups: Group[];
+  students: Student[];
+  selectedGroupId: string | null;
+  onSelectGroup: (groupId: string) => void;
+  onDataChanged: () => void;
+}
+
+export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
+  groups,
+  students,
+  selectedGroupId,
+  onSelectGroup,
+  onDataChanged,
+}) => {
+  const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
+
+  // Search filter
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Modals state
+  const [isNewGroupModalOpen, setIsNewGroupModalOpen] = useState(false);
+  const [isEditGroupModalOpen, setIsEditGroupModalOpen] = useState(false);
+  const [isNewStudentModalOpen, setIsNewStudentModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [movingStudent, setMovingStudent] = useState<Student | null>(null);
+  const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
+
+  // Form states for Group
+  const [groupForm, setGroupForm] = useState({
+    name: '',
+    grade: '1°',
+    section: 'A',
+    shift: 'Matutino' as 'Matutino' | 'Vespertino' | 'Nocturno',
+    schoolYear: '2026-2027',
+    colorHex: '#1E3A8A',
+  });
+
+  // Form states for Student
+  const [studentForm, setStudentForm] = useState({
+    firstName: '',
+    lastName: '',
+    rollNumber: 1,
+    status: 'Active' as StudentStatus,
+    notes: '',
+  });
+
+  const [targetMoveGroupId, setTargetMoveGroupId] = useState<string>('');
+
+  const groupStudents = activeGroup
+    ? students
+        .filter(s => s.groupId === activeGroup.id)
+        .filter(s => {
+          if (!searchQuery) return true;
+          const full = `${s.firstName} ${s.lastName} ${s.rollNumber}`.toLowerCase();
+          return full.includes(searchQuery.toLowerCase());
+        })
+        .sort((a, b) => a.rollNumber - b.rollNumber)
+    : [];
+
+  // ================= Handlers =================
+  const handleOpenNewGroup = () => {
+    setGroupForm({
+      name: '',
+      grade: '1°',
+      section: 'A',
+      shift: 'Matutino',
+      schoolYear: '2025-2026',
+      colorHex: '#1E3A8A',
+    });
+    setIsNewGroupModalOpen(true);
+  };
+
+  const handleSaveNewGroup = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!groupForm.name.trim()) return;
+    const newGrp = dbService.addGroup(groupForm);
+    onDataChanged();
+    onSelectGroup(newGrp.id);
+    setIsNewGroupModalOpen(false);
+  };
+
+  const handleOpenEditGroup = () => {
+    if (!activeGroup) return;
+    setGroupForm({
+      name: activeGroup.name,
+      grade: activeGroup.grade,
+      section: activeGroup.section,
+      shift: activeGroup.shift,
+      schoolYear: activeGroup.schoolYear,
+      colorHex: activeGroup.colorHex,
+    });
+    setIsEditGroupModalOpen(true);
+  };
+
+  const handleSaveEditGroup = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeGroup) return;
+    dbService.updateGroup({
+      ...activeGroup,
+      ...groupForm,
+    });
+    onDataChanged();
+    setIsEditGroupModalOpen(false);
+  };
+
+  const handleDeleteGroup = (groupId: string) => {
+    dbService.deleteGroup(groupId);
+    onDataChanged();
+    setDeletingGroupId(null);
+    if (selectedGroupId === groupId && groups.length > 1) {
+      const remaining = groups.filter(g => g.id !== groupId);
+      if (remaining.length > 0) onSelectGroup(remaining[0].id);
+    }
+  };
+
+  const handleOpenNewStudent = () => {
+    if (!activeGroup) return;
+    const nextRoll = students.filter(s => s.groupId === activeGroup.id).length + 1;
+    setStudentForm({
+      firstName: '',
+      lastName: '',
+      rollNumber: nextRoll,
+      status: 'Active',
+      notes: '',
+    });
+    setIsNewStudentModalOpen(true);
+  };
+
+  const handleSaveNewStudent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeGroup || !studentForm.firstName.trim() || !studentForm.lastName.trim()) return;
+    dbService.addStudent({
+      groupId: activeGroup.id,
+      firstName: studentForm.firstName.trim(),
+      lastName: studentForm.lastName.trim(),
+      rollNumber: Number(studentForm.rollNumber) || 1,
+      status: studentForm.status,
+      notes: studentForm.notes?.trim(),
+    });
+    onDataChanged();
+    setIsNewStudentModalOpen(false);
+  };
+
+  const handleOpenEditStudent = (student: Student) => {
+    setEditingStudent(student);
+    setStudentForm({
+      firstName: student.firstName,
+      lastName: student.lastName,
+      rollNumber: student.rollNumber,
+      status: student.status,
+      notes: student.notes || '',
+    });
+  };
+
+  const handleSaveEditStudent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+    dbService.updateStudent({
+      ...editingStudent,
+      firstName: studentForm.firstName.trim(),
+      lastName: studentForm.lastName.trim(),
+      rollNumber: Number(studentForm.rollNumber) || 1,
+      status: studentForm.status,
+      notes: studentForm.notes?.trim(),
+    });
+    onDataChanged();
+    setEditingStudent(null);
+  };
+
+  const handleToggleStudentStatus = (student: Student) => {
+    const nextStatus: StudentStatus = student.status === 'Active' ? 'Inactive' : 'Active';
+    dbService.updateStudentStatus(student.id, nextStatus);
+    onDataChanged();
+  };
+
+  const handleOpenMoveStudent = (student: Student) => {
+    setMovingStudent(student);
+    const otherGroups = groups.filter(g => g.id !== student.groupId);
+    if (otherGroups.length > 0) {
+      setTargetMoveGroupId(otherGroups[0].id);
+    }
+  };
+
+  const handleConfirmMoveStudent = () => {
+    if (!movingStudent || !targetMoveGroupId) return;
+    dbService.moveStudentToGroup(movingStudent.id, targetMoveGroupId);
+    onDataChanged();
+    setMovingStudent(null);
+  };
+
+  const handleDeleteStudent = (studentId: string) => {
+    if (window.confirm('¿Desea eliminar permanentemente a este alumno y todas sus calificaciones/asistencias?')) {
+      dbService.deleteStudent(studentId);
+      onDataChanged();
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Title & Actions Bar */}
+      <div className="bg-white border border-slate-300 rounded shadow-xs p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded bg-blue-50 border border-blue-200 text-blue-800">
+            <Users className="w-4 h-4" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 tracking-tight">Catálogo de Grupos y Alumnos</h1>
+            <p className="text-[11px] text-slate-500">
+              Gestión académica local: grupos escolares, matrícula de alumnos, números de lista y traslados.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleOpenNewGroup}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs transition-colors border border-blue-800"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Crear Nuevo Grupo</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Two-Column Master-Detail Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        {/* Left Column: Groups List (4 cols) */}
+        <div className="lg:col-span-4 bg-white border border-slate-300 rounded shadow-xs overflow-hidden">
+          <div className="bg-slate-100 px-3 py-2 border-b border-slate-300 flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+              Grupos Registrados ({groups.length})
+            </span>
+            <button
+              onClick={handleOpenNewGroup}
+              className="text-[11px] text-blue-700 hover:underline font-semibold"
+            >
+              + Añadir
+            </button>
+          </div>
+
+          <div className="p-2 space-y-1 bg-slate-50/50 max-h-[550px] overflow-y-auto">
+            {groups.length === 0 ? (
+              <div className="p-4 text-center text-slate-500 text-xs leading-relaxed">
+                No hay grupos escolares dados de alta. Haga clic en <strong className="text-blue-700 font-semibold">+ Añadir</strong> para registrar el primer grupo.
+              </div>
+            ) : (
+              groups.map(group => {
+              const isSelected = activeGroup && activeGroup.id === group.id;
+              const count = students.filter(s => s.groupId === group.id).length;
+              const activeCount = students.filter(s => s.groupId === group.id && s.status === 'Active').length;
+
+              return (
+                <div
+                  key={group.id}
+                  onClick={() => onSelectGroup(group.id)}
+                  className={`p-2.5 rounded cursor-pointer border transition-colors flex items-center justify-between ${
+                    isSelected
+                      ? 'bg-blue-50 border-blue-400 text-blue-950 font-semibold shadow-xs'
+                      : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="w-2.5 h-7 rounded shrink-0"
+                      style={{ backgroundColor: group.colorHex || '#1E3A8A' }}
+                    />
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900">{group.name}</h4>
+                      <p className="text-[11px] text-slate-500">
+                        Turno {group.shift} • {activeCount} activos ({count} tot)
+                      </p>
+                    </div>
+                  </div>
+
+                  {isSelected && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditGroup();
+                        }}
+                        className="p-1 rounded text-slate-600 hover:text-blue-800 hover:bg-blue-100 transition-colors"
+                        title="Editar Grupo"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingGroupId(group.id);
+                        }}
+                        className="p-1 rounded text-slate-600 hover:text-red-700 hover:bg-red-100 transition-colors"
+                        title="Eliminar Grupo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Group Roster & Student Table (8 cols) */}
+        <div className="lg:col-span-8 bg-white border border-slate-300 rounded shadow-xs overflow-hidden">
+          {activeGroup ? (
+            <>
+              {/* Active Group Header */}
+              <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded"
+                      style={{ backgroundColor: activeGroup.colorHex || '#1E3A8A' }}
+                    />
+                    <h2 className="text-sm font-bold text-slate-900">{activeGroup.name}</h2>
+                    <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-white border border-slate-300 text-slate-600">
+                      Ciclo {activeGroup.schoolYear}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Grado {activeGroup.grade} | Sección "{activeGroup.section}" | Turno {activeGroup.shift}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleOpenNewStudent}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs transition-colors border border-blue-800"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Inscribir Alumno</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Search input & counter */}
+              <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Filtrar por apellidos, nombre o N° lista..."
+                    className="w-full pl-8 pr-2.5 py-1.5 rounded bg-white border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 shadow-inner"
+                  />
+                </div>
+                <div className="text-[11px] text-slate-600 font-semibold shrink-0">
+                  {groupStudents.length} Alumnos en listado
+                </div>
+              </div>
+
+              {/* Students Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-700 font-bold border-b border-slate-300">
+                      <th className="py-2 px-3 w-12 text-center border-r border-slate-200">N°</th>
+                      <th className="py-2 px-3 border-r border-slate-200">Apellidos y Nombres</th>
+                      <th className="py-2 px-3 w-28 text-center border-r border-slate-200">Estatus</th>
+                      <th className="py-2 px-3 hidden md:table-cell border-r border-slate-200">Observaciones</th>
+                      <th className="py-2 px-3 w-24 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {groupStudents.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-500">
+                          No hay alumnos registrados en este grupo o no coinciden con la búsqueda.
+                        </td>
+                      </tr>
+                    ) : (
+                      groupStudents.map(student => (
+                        <tr
+                          key={student.id}
+                          className={`hover:bg-blue-50/40 transition-colors ${
+                            student.status === 'Inactive' ? 'opacity-60 bg-slate-100/50' : ''
+                          }`}
+                        >
+                          <td className="py-2 px-3 text-center font-mono font-bold text-slate-600 border-r border-slate-200 bg-slate-50/50">
+                            {student.rollNumber}
+                          </td>
+                          <td className="py-2 px-3 border-r border-slate-200">
+                            <span className="font-bold text-slate-900 block">
+                              {student.lastName}
+                            </span>
+                            <span className="text-slate-600 text-[11px]">
+                              {student.firstName}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-center border-r border-slate-200">
+                            <button
+                              onClick={() => handleToggleStudentStatus(student)}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${
+                                student.status === 'Active'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                                  : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                              }`}
+                              title="Clic para alternar estatus (Activo / Baja)"
+                            >
+                              {student.status === 'Active' ? (
+                                <>
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  <span>Activo</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="w-3 h-3 text-slate-500" />
+                                  <span>Baja</span>
+                                </>
+                              )}
+                            </button>
+                          </td>
+                          <td className="py-2 px-3 hidden md:table-cell text-slate-600 text-[11px] truncate max-w-[200px] border-r border-slate-200">
+                            {student.notes || <span className="text-slate-400 italic">Sin observaciones</span>}
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleOpenMoveStudent(student)}
+                                className="p-1 rounded text-slate-500 hover:text-amber-700 hover:bg-amber-50 transition-colors"
+                                title="Cambiar de Grupo (Mover alumno)"
+                              >
+                                <ArrowRightLeft className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleOpenEditStudent(student)}
+                                className="p-1 rounded text-slate-500 hover:text-blue-800 hover:bg-blue-50 transition-colors"
+                                title="Editar datos"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteStudent(student.id)}
+                                className="p-1 rounded text-slate-500 hover:text-red-700 hover:bg-red-50 transition-colors"
+                                title="Eliminar Alumno"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <div className="py-16 px-6 text-center space-y-3">
+              <div className="w-10 h-10 rounded bg-blue-50 border border-blue-200 text-blue-800 flex items-center justify-center mx-auto">
+                <Users className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Ningún grupo seleccionado
+              </h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                {groups.length === 0 
+                  ? 'Para comenzar a inscribir alumnos y pasar lista, primero cree su primer grupo escolar.' 
+                  : 'Seleccione un grupo de la columna izquierda para administrar su lista de alumnos.'}
+              </p>
+              {groups.length === 0 && (
+                <button
+                  onClick={handleOpenNewGroup}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs transition-colors border border-blue-800"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Crear Primer Grupo</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ================= MODAL: NUEVO GRUPO ================= */}
+      {isNewGroupModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-400 rounded shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-slate-800 text-white px-3 py-1.5 flex items-center justify-between text-xs font-semibold select-none">
+              <span>Nuevo Grupo Escolar</span>
+              <button onClick={() => setIsNewGroupModalOpen(false)} className="text-slate-300 hover:text-white">✕</button>
+            </div>
+            <form onSubmit={handleSaveNewGroup} className="p-4 space-y-3 bg-slate-50 text-xs">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Nombre del Grupo:</label>
+                <input
+                  type="text"
+                  required
+                  value={groupForm.name}
+                  onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
+                  placeholder="Ej. 2° C - Secundaria"
+                  className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Grado:</label>
+                  <input
+                    type="text"
+                    required
+                    value={groupForm.grade}
+                    onChange={(e) => setGroupForm({ ...groupForm, grade: e.target.value })}
+                    placeholder="1°, 2°, 3°..."
+                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Sección:</label>
+                  <input
+                    type="text"
+                    required
+                    value={groupForm.section}
+                    onChange={(e) => setGroupForm({ ...groupForm, section: e.target.value })}
+                    placeholder="A, B, C..."
+                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Turno:</label>
+                  <select
+                    value={groupForm.shift}
+                    onChange={(e) => setGroupForm({ ...groupForm, shift: e.target.value as any })}
+                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                  >
+                    <option value="Matutino">Matutino</option>
+                    <option value="Vespertino">Vespertino</option>
+                    <option value="Nocturno">Nocturno</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Color Identificador:</label>
+                  <input
+                    type="color"
+                    value={groupForm.colorHex}
+                    onChange={(e) => setGroupForm({ ...groupForm, colorHex: e.target.value })}
+                    className="w-full h-8 rounded bg-white border border-slate-300 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsNewGroupModalOpen(false)}
+                  className="px-3 py-1.5 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-3.5 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs"
+                >
+                  Guardar Grupo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EDITAR GRUPO ================= */}
+      {isEditGroupModalOpen && activeGroup && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-400 rounded shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-slate-800 text-white px-3 py-1.5 flex items-center justify-between text-xs font-semibold select-none">
+              <span>Editar Grupo Escolar</span>
+              <button onClick={() => setIsEditGroupModalOpen(false)} className="text-slate-300 hover:text-white">✕</button>
+            </div>
+            <form onSubmit={handleSaveEditGroup} className="p-4 space-y-3 bg-slate-50 text-xs">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Nombre del Grupo:</label>
+                <input
+                  type="text"
+                  required
+                  value={groupForm.name}
+                  onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
+                  className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Grado:</label>
+                  <input
+                    type="text"
+                    required
+                    value={groupForm.grade}
+                    onChange={(e) => setGroupForm({ ...groupForm, grade: e.target.value })}
+                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Sección:</label>
+                  <input
+                    type="text"
+                    required
+                    value={groupForm.section}
+                    onChange={(e) => setGroupForm({ ...groupForm, section: e.target.value })}
+                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Turno:</label>
+                  <select
+                    value={groupForm.shift}
+                    onChange={(e) => setGroupForm({ ...groupForm, shift: e.target.value as any })}
+                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                  >
+                    <option value="Matutino">Matutino</option>
+                    <option value="Vespertino">Vespertino</option>
+                    <option value="Nocturno">Nocturno</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Color Identificador:</label>
+                  <input
+                    type="color"
+                    value={groupForm.colorHex}
+                    onChange={(e) => setGroupForm({ ...groupForm, colorHex: e.target.value })}
+                    className="w-full h-8 rounded bg-white border border-slate-300 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsEditGroupModalOpen(false)}
+                  className="px-3 py-1.5 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-3.5 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs"
+                >
+                  Actualizar Grupo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: ELIMINAR GRUPO (CASCADE WARNING) ================= */}
+      {deletingGroupId && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-red-400 rounded shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-red-800 text-white px-3 py-1.5 flex items-center justify-between text-xs font-semibold select-none">
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Confirmar Eliminación en Cascada</span>
+              </div>
+              <button onClick={() => setDeletingGroupId(null)} className="text-white hover:opacity-80">✕</button>
+            </div>
+            <div className="p-4 space-y-3 bg-slate-50 text-xs">
+              <p className="text-slate-800 leading-relaxed">
+                Esta acción ejecutará una eliminación en cascada en SQLite (<code className="text-red-700 font-mono font-bold">ON DELETE CASCADE</code>).
+                Se eliminarán de forma definitiva todos los alumnos, asistencias y calificaciones pertenecientes a este grupo.
+              </p>
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setDeletingGroupId(null)}
+                  className="px-3 py-1.5 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteGroup(deletingGroupId)}
+                  className="px-3.5 py-1.5 rounded bg-red-700 hover:bg-red-800 text-white text-xs font-semibold shadow-xs"
+                >
+                  Eliminar Grupo y Registros
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: INSCRIBIR / EDITAR ALUMNO ================= */}
+      {(isNewStudentModalOpen || editingStudent) && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-400 rounded shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-slate-800 text-white px-3 py-1.5 flex items-center justify-between text-xs font-semibold select-none">
+              <span>{editingStudent ? 'Editar Datos del Alumno' : 'Ficha de Inscripción de Alumno'}</span>
+              <button
+                onClick={() => {
+                  setIsNewStudentModalOpen(false);
+                  setEditingStudent(null);
+                }}
+                className="text-slate-300 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={editingStudent ? handleSaveEditStudent : handleSaveNewStudent} className="p-4 space-y-3 bg-slate-50 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Apellidos:</label>
+                  <input
+                    type="text"
+                    required
+                    value={studentForm.lastName}
+                    onChange={(e) => setStudentForm({ ...studentForm, lastName: e.target.value })}
+                    placeholder="Ej. García López"
+                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Nombres:</label>
+                  <input
+                    type="text"
+                    required
+                    value={studentForm.firstName}
+                    onChange={(e) => setStudentForm({ ...studentForm, firstName: e.target.value })}
+                    placeholder="Ej. Juan Carlos"
+                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Número de Lista:</label>
+                  <input
+                    type="number"
+                    min={1}
+                    required
+                    value={studentForm.rollNumber}
+                    onChange={(e) => setStudentForm({ ...studentForm, rollNumber: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Estatus Académico:</label>
+                  <select
+                    value={studentForm.status}
+                    onChange={(e) => setStudentForm({ ...studentForm, status: e.target.value as any })}
+                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                  >
+                    <option value="Active">Activo</option>
+                    <option value="Inactive">Baja Temporal / Inactivo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Observaciones / Tutor / Notas:</label>
+                <textarea
+                  rows={2}
+                  value={studentForm.notes}
+                  onChange={(e) => setStudentForm({ ...studentForm, notes: e.target.value })}
+                  placeholder="Ej. Alergias, teléfono de tutor, promedio anterior..."
+                  className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNewStudentModalOpen(false);
+                    setEditingStudent(null);
+                  }}
+                  className="px-3 py-1.5 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-3.5 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs"
+                >
+                  {editingStudent ? 'Guardar Cambios' : 'Registrar Alumno'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: TRASLADAR / MOVER ALUMNO DE GRUPO ================= */}
+      {movingStudent && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-400 rounded shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-slate-800 text-white px-3 py-1.5 flex items-center justify-between text-xs font-semibold select-none">
+              <span>Trasladar Alumno de Grupo</span>
+              <button onClick={() => setMovingStudent(null)} className="text-slate-300 hover:text-white">✕</button>
+            </div>
+            <div className="p-4 space-y-3 bg-slate-50 text-xs">
+              <p className="text-slate-700">
+                Alumno a transferir: <strong className="text-slate-900">{movingStudent.lastName}, {movingStudent.firstName}</strong>
+              </p>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Nuevo Grupo de Destino:</label>
+                <select
+                  value={targetMoveGroupId}
+                  onChange={(e) => setTargetMoveGroupId(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                >
+                  {groups
+                    .filter(g => g.id !== movingStudent.groupId)
+                    .map(g => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} ({g.shift})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <p className="text-[11px] text-slate-500">
+                Se le asignará automáticamente el número de lista consecutivo en el grupo seleccionado.
+              </p>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setMovingStudent(null)}
+                  className="px-3 py-1.5 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmMoveStudent}
+                  className="px-3.5 py-1.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs"
+                >
+                  Confirmar Traslado
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

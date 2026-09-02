@@ -1,0 +1,7 @@
+{
+  "name": "EduGestion - Sistema de Control Escolar",
+  "description": "Aplicación institucional de escritorio para control de grupos, matrícula de alumnos, registro de asistencia diaria y sábanas de calificaciones.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
