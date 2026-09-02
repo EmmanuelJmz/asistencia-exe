@@ -107,6 +107,7 @@ export interface DatabaseStats {
 
 export type ActiveScreen = 
   | 'dashboard'
+  | 'global_students'
   | 'groups_students'
   | 'attendance'
   | 'grades'

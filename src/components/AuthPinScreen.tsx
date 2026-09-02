@@ -128,7 +128,7 @@ export const AuthPinScreen: React.FC<AuthPinScreenProps> = ({ onAuthenticated })
               ))}
             </div>
             <span className="text-[11px] text-slate-500 block">
-              PIN por defecto: <strong className="text-blue-700 font-mono">1234</strong>
+              Ingrese el código de acceso
             </span>
           </div>
 
@@ -191,15 +191,9 @@ export const AuthPinScreen: React.FC<AuthPinScreenProps> = ({ onAuthenticated })
         </div>
 
         {/* Dialog Footer Actions */}
-        <div className="bg-slate-100 px-4 py-3 flex items-center justify-between text-xs">
-          <button
-            onClick={handleDemoBypass}
-            className="text-blue-700 hover:underline font-medium text-xs"
-          >
-            Usar PIN Demo (1234)
-          </button>
+        <div className="bg-slate-100 px-4 py-3 flex items-center justify-center text-xs">
           <span className="text-[11px] text-slate-500">
-            SQLite v3 Local • Offline
+            Sincronización en la Nube Activa • EduGestión
           </span>
         </div>
 

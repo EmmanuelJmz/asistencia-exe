@@ -3,21 +3,16 @@ import {
   BarChart3, 
   FileSpreadsheet, 
   Printer, 
-  Download, 
   School, 
-  Users, 
-  CheckCircle2, 
-  AlertCircle,
-  FileText,
-  Award
+  CheckCircle2,
+  CheckSquare,
+  GraduationCap
 } from 'lucide-react';
 import { 
   Group, 
   Student, 
   Subject, 
   Period, 
-  Grade, 
-  AttendanceRecord,
   UserSettings
 } from '../types';
 import { dbService } from '../db/databaseService';
@@ -25,8 +20,8 @@ import { dbService } from '../db/databaseService';
 interface ReportsScreenProps {
   groups: Group[];
   students: Student[];
-  subjects: Subject[];
-  periods: Period[];
+  subjects: Subject[]; // Mantenido para no romper App.tsx aunque no se use
+  periods: Period[];   // Mantenido para no romper App.tsx aunque no se use
   settings: UserSettings;
   selectedGroupId: string | null;
   onSelectGroup: (groupId: string) => void;
@@ -35,15 +30,12 @@ interface ReportsScreenProps {
 export const ReportsScreen: React.FC<ReportsScreenProps> = ({
   groups,
   students,
-  subjects,
-  periods,
   settings,
   selectedGroupId,
   onSelectGroup,
 }) => {
   const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjects[0]?.id || '');
-  const [selectedPeriodId, setSelectedPeriodId] = useState<string>(periods[0]?.id || '');
+  const [currentTab, setCurrentTab] = useState<'attendance' | 'grades'>('attendance');
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
 
   const raw = dbService.getRawTables();
@@ -53,9 +45,6 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
         .filter(s => s.groupId === activeGroup.id)
         .sort((a, b) => a.rollNumber - b.rollNumber)
     : [];
-
-  const activeSubject = subjects.find(s => s.id === selectedSubjectId);
-  const activePeriod = periods.find(p => p.id === selectedPeriodId);
 
   // Calculate statistics for each student
   const studentReports = groupStudents.map(student => {
@@ -68,12 +57,9 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
     const justificadas = studentRecords.filter(r => r.status === 'Justificada').length;
     const attPct = totalSessions > 0 ? Math.round(((presentes + retardos) / totalSessions) * 100) : 100;
 
-    // Grades for this group (and subject/period if specified)
+    // Grades for this group 
     const studentGrades = raw.grades.filter(
-      g => g.studentId === student.id &&
-           g.groupId === activeGroup?.id &&
-           (!selectedSubjectId || !g.subjectId || g.subjectId === selectedSubjectId) &&
-           (!selectedPeriodId || !g.periodId || g.periodId === selectedPeriodId)
+      g => g.studentId === student.id && g.groupId === activeGroup?.id
     );
 
     const gradeScores = studentGrades.map(g => g.score);
@@ -111,45 +97,39 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
   const handleExportCSV = async () => {
     if (!activeGroup) return;
 
-    let csvContent = 'N_Lista,Apellidos,Nombres,Estatus,Asistencias,Faltas,Retardos,Justificadas,Porcentaje_Asistencia,Promedio_Calificacion\n';
+    let csvContent = currentTab === 'attendance' 
+      ? 'N_Lista,Apellidos,Nombres,Estatus,Asistencias,Faltas,Retardos,Justificadas,Porcentaje_Asistencia\n'
+      : 'N_Lista,Apellidos,Nombres,Estatus,Promedio_Calificacion\n';
 
     studentReports.forEach(r => {
-      const row = [
-        r.student.rollNumber,
-        `"${r.student.lastName.replace(/"/g, '""')}"`,
-        `"${r.student.firstName.replace(/"/g, '""')}"`,
-        r.student.status,
-        r.presentes,
-        r.faltas,
-        r.retardos,
-        r.justificadas,
-        `${r.attPct}%`,
-        r.avgGrade,
-      ].join(',');
+      let row = '';
+      if (currentTab === 'attendance') {
+        row = [
+          r.student.rollNumber,
+          `"${r.student.lastName.replace(/"/g, '""')}"`,
+          `"${r.student.firstName.replace(/"/g, '""')}"`,
+          r.student.status,
+          r.presentes,
+          r.faltas,
+          r.retardos,
+          r.justificadas,
+          `${r.attPct}%`
+        ].join(',');
+      } else {
+        row = [
+          r.student.rollNumber,
+          `"${r.student.lastName.replace(/"/g, '""')}"`,
+          `"${r.student.firstName.replace(/"/g, '""')}"`,
+          r.student.status,
+          r.avgGrade
+        ].join(',');
+      }
       csvContent += row + '\n';
     });
 
-    const defaultFilename = `Reporte_${activeGroup.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    const prefix = currentTab === 'attendance' ? 'Asistencia' : 'Calificaciones';
+    const defaultFilename = `Reporte_${prefix}_${activeGroup.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
 
-    // Check if Electron native dialog is available
-    if ((window as any).electronAPI?.exportFile) {
-      try {
-        const res = await (window as any).electronAPI.exportFile({
-          defaultName: defaultFilename,
-          content: csvContent,
-          filters: [{ name: 'CSV (Valores separados por comas)', extensions: ['csv'] }]
-        });
-        if (res?.success) {
-          setExportFeedback(`Archivo guardado exitosamente en: ${res.filePath}`);
-          setTimeout(() => setExportFeedback(null), 4000);
-          return;
-        }
-      } catch (err) {
-        console.warn('Native export error, fallback to browser download', err);
-      }
-    }
-
-    // Fallback: Browser Blob Download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -203,7 +183,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
         </div>
 
         {/* Filter Controls Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2.5 border-t border-slate-200 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2.5 border-t border-slate-200 text-xs">
           <div>
             <label className="font-semibold text-slate-700 block mb-1">Grupo Escolar:</label>
             <select
@@ -218,35 +198,32 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
               ))}
             </select>
           </div>
-
           <div>
-            <label className="font-semibold text-slate-700 block mb-1">Materia / Asignatura:</label>
-            <select
-              value={selectedSubjectId}
-              onChange={(e) => setSelectedSubjectId(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-xs text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
-            >
-              {subjects.map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.code})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="font-semibold text-slate-700 block mb-1">Periodo Escolar:</label>
-            <select
-              value={selectedPeriodId}
-              onChange={(e) => setSelectedPeriodId(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-xs text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
-            >
-              {periods.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            <label className="font-semibold text-slate-700 block mb-1">Tipo de Reporte:</label>
+            <div className="flex items-center bg-slate-100 border border-slate-300 rounded p-1">
+              <button
+                onClick={() => setCurrentTab('attendance')}
+                className={`flex-1 flex items-center justify-center gap-2 py-1 rounded text-xs font-semibold transition-colors ${
+                  currentTab === 'attendance'
+                    ? 'bg-white shadow-xs text-slate-900 border-slate-200'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <CheckSquare className="w-3.5 h-3.5" />
+                Reporte de Asistencias
+              </button>
+              <button
+                onClick={() => setCurrentTab('grades')}
+                className={`flex-1 flex items-center justify-center gap-2 py-1 rounded text-xs font-semibold transition-colors ${
+                  currentTab === 'grades'
+                    ? 'bg-white shadow-xs text-slate-900 border-slate-200'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <GraduationCap className="w-3.5 h-3.5" />
+                Reporte de Calificaciones
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -274,9 +251,10 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
           </div>
 
           <div className="text-left md:text-right space-y-0.5 text-xs text-slate-700">
+            <p className="font-bold text-sm text-slate-900">
+              {currentTab === 'attendance' ? 'Reporte Oficial de Asistencias' : 'Sábana Oficial de Calificaciones'}
+            </p>
             <p><strong>Grupo:</strong> {activeGroup?.name || 'N/A'}</p>
-            <p><strong>Asignatura:</strong> {activeSubject?.name || 'Todas'}</p>
-            <p><strong>Periodo:</strong> {activePeriod?.name || 'Todos'}</p>
           </div>
         </div>
 
@@ -286,20 +264,27 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
             <span className="text-[11px] text-slate-500 font-medium block">Total Alumnos</span>
             <p className="text-base font-bold text-slate-900 font-mono">{groupStudents.length}</p>
           </div>
-          <div className="bg-slate-50 border border-slate-300 rounded p-2.5 text-center">
-            <span className="text-[11px] text-slate-500 font-medium block">Promedio Calificaciones</span>
-            <p className="text-base font-bold text-blue-900 font-mono">{groupGradeAverage}</p>
-          </div>
-          <div className="bg-slate-50 border border-slate-300 rounded p-2.5 text-center">
-            <span className="text-[11px] text-slate-500 font-medium block">% Asistencia Grupal</span>
-            <p className="text-base font-bold text-emerald-800 font-mono">{groupAttendanceAverage}%</p>
-          </div>
-          <div className="bg-slate-50 border border-slate-300 rounded p-2.5 text-center">
-            <span className="text-[11px] text-slate-500 font-medium block">Alumnos Aprobados</span>
-            <p className="text-base font-bold text-teal-800 font-mono">
-              {studentReports.filter(r => r.avgGrade !== 'N/A' && parseFloat(r.avgGrade) >= 6.0).length} / {studentReports.length}
-            </p>
-          </div>
+          {currentTab === 'grades' ? (
+            <>
+              <div className="bg-slate-50 border border-slate-300 rounded p-2.5 text-center">
+                <span className="text-[11px] text-slate-500 font-medium block">Promedio Calificaciones</span>
+                <p className="text-base font-bold text-blue-900 font-mono">{groupGradeAverage}</p>
+              </div>
+              <div className="bg-slate-50 border border-slate-300 rounded p-2.5 text-center sm:col-span-2">
+                <span className="text-[11px] text-slate-500 font-medium block">Alumnos Aprobados</span>
+                <p className="text-base font-bold text-teal-800 font-mono">
+                  {studentReports.filter(r => r.avgGrade !== 'N/A' && parseFloat(r.avgGrade) >= 6.0).length} / {studentReports.length}
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="bg-slate-50 border border-slate-300 rounded p-2.5 text-center sm:col-span-3">
+                <span className="text-[11px] text-slate-500 font-medium block">% Asistencia Grupal</span>
+                <p className="text-base font-bold text-emerald-800 font-mono">{groupAttendanceAverage}%</p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Master Grade & Attendance Table */}
@@ -310,18 +295,23 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                 <th className="py-2 px-2.5 w-10 text-center border-r border-slate-200">N°</th>
                 <th className="py-2 px-2.5 border-r border-slate-200">Apellidos y Nombres</th>
                 <th className="py-2 px-2 text-center w-20 border-r border-slate-200">Estatus</th>
-                <th className="py-2 px-2 text-center text-emerald-800 border-r border-slate-200">Pres.</th>
-                <th className="py-2 px-2 text-center text-red-700 border-r border-slate-200">Falt.</th>
-                <th className="py-2 px-2 text-center text-amber-700 border-r border-slate-200">Ret.</th>
-                <th className="py-2 px-2 text-center text-blue-700 border-r border-slate-200">Just.</th>
-                <th className="py-2 px-2.5 text-center border-r border-slate-200">% Asist.</th>
-                <th className="py-2 px-2.5 text-center font-bold text-slate-900">Promedio</th>
+                {currentTab === 'attendance' ? (
+                  <>
+                    <th className="py-2 px-2 text-center text-emerald-800 border-r border-slate-200">Pres.</th>
+                    <th className="py-2 px-2 text-center text-red-700 border-r border-slate-200">Falt.</th>
+                    <th className="py-2 px-2 text-center text-amber-700 border-r border-slate-200">Ret.</th>
+                    <th className="py-2 px-2 text-center text-blue-700 border-r border-slate-200">Just.</th>
+                    <th className="py-2 px-2.5 text-center border-r border-slate-200">% Asist.</th>
+                  </>
+                ) : (
+                  <th className="py-2 px-2.5 text-center font-bold text-slate-900">Promedio</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {studentReports.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-500">
+                  <td colSpan={currentTab === 'attendance' ? 8 : 4} className="py-8 text-center text-slate-500">
                     No hay alumnos registrados para generar el reporte.
                   </td>
                 </tr>
@@ -347,34 +337,39 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                           {r.student.status === 'Active' ? 'Activo' : 'Baja'}
                         </span>
                       </td>
-                      <td className="py-1.5 px-2 text-center font-mono font-semibold text-emerald-700 border-r border-slate-200">
-                        {r.presentes}
-                      </td>
-                      <td className="py-1.5 px-2 text-center font-mono font-semibold text-red-600 border-r border-slate-200">
-                        {r.faltas}
-                      </td>
-                      <td className="py-1.5 px-2 text-center font-mono font-semibold text-amber-600 border-r border-slate-200">
-                        {r.retardos}
-                      </td>
-                      <td className="py-1.5 px-2 text-center font-mono font-semibold text-blue-600 border-r border-slate-200">
-                        {r.justificadas}
-                      </td>
-                      <td className="py-1.5 px-2.5 text-center font-mono font-bold text-slate-700 border-r border-slate-200">
-                        {r.attPct}%
-                      </td>
-                      <td className="py-1.5 px-2.5 text-center">
-                        {r.avgGrade === 'N/A' ? (
-                          <span className="text-slate-400 font-mono text-xs">S/C</span>
-                        ) : (
-                          <span className={`font-mono font-bold px-2 py-0.5 rounded text-xs ${
-                            isPassing
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
-                              : 'bg-red-50 text-red-700 border border-red-300'
-                          }`}>
-                            {r.avgGrade}
-                          </span>
-                        )}
-                      </td>
+                      {currentTab === 'attendance' ? (
+                        <>
+                          <td className="py-1.5 px-2 text-center font-mono font-semibold text-emerald-700 border-r border-slate-200">
+                            {r.presentes}
+                          </td>
+                          <td className="py-1.5 px-2 text-center font-mono font-semibold text-red-600 border-r border-slate-200">
+                            {r.faltas}
+                          </td>
+                          <td className="py-1.5 px-2 text-center font-mono font-semibold text-amber-600 border-r border-slate-200">
+                            {r.retardos}
+                          </td>
+                          <td className="py-1.5 px-2 text-center font-mono font-semibold text-blue-600 border-r border-slate-200">
+                            {r.justificadas}
+                          </td>
+                          <td className="py-1.5 px-2.5 text-center font-mono font-bold text-slate-700 border-r border-slate-200">
+                            {r.attPct}%
+                          </td>
+                        </>
+                      ) : (
+                        <td className="py-1.5 px-2.5 text-center">
+                          {r.avgGrade === 'N/A' ? (
+                            <span className="text-slate-400 font-mono text-xs">S/C</span>
+                          ) : (
+                            <span className={`font-mono font-bold px-2 py-0.5 rounded text-xs ${
+                              isPassing
+                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                                : 'bg-red-50 text-red-700 border border-red-300'
+                            }`}>
+                              {r.avgGrade}
+                            </span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })

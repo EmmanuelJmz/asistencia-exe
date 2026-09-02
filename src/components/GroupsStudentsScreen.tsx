@@ -41,9 +41,12 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
   const [isNewGroupModalOpen, setIsNewGroupModalOpen] = useState(false);
   const [isEditGroupModalOpen, setIsEditGroupModalOpen] = useState(false);
   const [isNewStudentModalOpen, setIsNewStudentModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [movingStudent, setMovingStudent] = useState<Student | null>(null);
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
+  const [importSearchQuery, setImportSearchQuery] = useState('');
+  const [selectedImportStudentIds, setSelectedImportStudentIds] = useState<Set<string>>(new Set());
 
   // Form states for Group
   const [groupForm, setGroupForm] = useState({
@@ -159,6 +162,33 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
     });
     onDataChanged();
     setIsNewStudentModalOpen(false);
+  };
+
+  const handleOpenImportModal = () => {
+    setImportSearchQuery('');
+    setSelectedImportStudentIds(new Set());
+    setIsImportModalOpen(true);
+  };
+
+  const handleExecuteImport = () => {
+    if (!activeGroup || selectedImportStudentIds.size === 0) return;
+    let nextRoll = students.filter(s => s.groupId === activeGroup.id).length + 1;
+    
+    selectedImportStudentIds.forEach(stuId => {
+      const stuToCopy = students.find(s => s.id === stuId);
+      if (stuToCopy) {
+        dbService.addStudent({
+          groupId: activeGroup.id,
+          firstName: stuToCopy.firstName,
+          lastName: stuToCopy.lastName,
+          rollNumber: nextRoll++,
+          status: 'Active',
+          notes: stuToCopy.notes,
+        });
+      }
+    });
+    onDataChanged();
+    setIsImportModalOpen(false);
   };
 
   const handleOpenEditStudent = (student: Student) => {
@@ -344,7 +374,14 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleOpenImportModal}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-white hover:bg-slate-200 text-slate-800 text-xs font-semibold shadow-xs transition-colors border border-slate-300"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span>Importar Existente</span>
+                  </button>
                   <button
                     onClick={handleOpenNewStudent}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs transition-colors border border-blue-800"
@@ -728,17 +765,6 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
             <form onSubmit={editingStudent ? handleSaveEditStudent : handleSaveNewStudent} className="p-4 space-y-3 bg-slate-50 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Apellidos:</label>
-                  <input
-                    type="text"
-                    required
-                    value={studentForm.lastName}
-                    onChange={(e) => setStudentForm({ ...studentForm, lastName: e.target.value })}
-                    placeholder="Ej. García López"
-                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
-                  />
-                </div>
-                <div>
                   <label className="font-semibold text-slate-700 block mb-1">Nombres:</label>
                   <input
                     type="text"
@@ -749,21 +775,34 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                     className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Número de Lista:</label>
+                  <label className="font-semibold text-slate-700 block mb-1">Apellidos:</label>
                   <input
-                    type="number"
-                    min={1}
+                    type="text"
                     required
-                    value={studentForm.rollNumber}
-                    onChange={(e) => setStudentForm({ ...studentForm, rollNumber: Number(e.target.value) })}
+                    value={studentForm.lastName}
+                    onChange={(e) => setStudentForm({ ...studentForm, lastName: e.target.value })}
+                    placeholder="Ej. García López"
                     className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
                   />
                 </div>
-                <div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {editingStudent && (
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Número de Lista:</label>
+                    <input
+                      type="number"
+                      min={1}
+                      required
+                      value={studentForm.rollNumber}
+                      onChange={(e) => setStudentForm({ ...studentForm, rollNumber: Number(e.target.value) })}
+                      className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                    />
+                  </div>
+                )}
+                <div className={!editingStudent ? "col-span-2" : ""}>
                   <label className="font-semibold text-slate-700 block mb-1">Estatus Académico:</label>
                   <select
                     value={studentForm.status}
@@ -806,6 +845,108 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: IMPORTAR ALUMNO EXISTENTE ================= */}
+      {isImportModalOpen && activeGroup && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-400 rounded shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="bg-slate-800 text-white px-3 py-2 flex items-center justify-between text-xs font-semibold select-none">
+              <span>Directorio Global: Importar Alumnos al Grupo</span>
+              <button onClick={() => setIsImportModalOpen(false)} className="text-slate-300 hover:text-white">✕</button>
+            </div>
+            <div className="p-4 bg-slate-50 border-b border-slate-200 space-y-2">
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                Busque alumnos que ya estén registrados en otros grupos del sistema para copiarlos a este grupo.
+              </p>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={importSearchQuery}
+                  onChange={(e) => setImportSearchQuery(e.target.value)}
+                  placeholder="Buscar por apellidos o nombres en todo el sistema..."
+                  className="w-full pl-8 pr-2.5 py-1.5 rounded bg-white border border-slate-300 text-xs text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                />
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-2 bg-slate-50 space-y-1">
+              {(() => {
+                const otherStudents = students.filter(s => s.groupId !== activeGroup.id);
+                const filtered = importSearchQuery
+                  ? otherStudents.filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(importSearchQuery.toLowerCase()))
+                  : otherStudents;
+
+                if (otherStudents.length === 0) {
+                  return <div className="p-4 text-center text-xs text-slate-500">No hay alumnos en otros grupos.</div>;
+                }
+                if (filtered.length === 0) {
+                  return <div className="p-4 text-center text-xs text-slate-500">Ningún alumno coincide con la búsqueda.</div>;
+                }
+
+                // Group by source group for UI clarity
+                const grouped = filtered.reduce((acc, stu) => {
+                  const grp = groups.find(g => g.id === stu.groupId)?.name || 'Grupo Desconocido';
+                  if (!acc[grp]) acc[grp] = [];
+                  acc[grp].push(stu);
+                  return acc;
+                }, {} as Record<string, Student[]>);
+
+                return Object.entries(grouped).map(([groupName, stus]) => (
+                  <div key={groupName} className="mb-3 border border-slate-200 rounded overflow-hidden">
+                    <div className="bg-slate-200/60 px-3 py-1.5 text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                      Proviene de: {groupName}
+                    </div>
+                    <div className="divide-y divide-slate-100 bg-white">
+                      {stus.map(stu => (
+                        <label key={stu.id} className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50/50 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={selectedImportStudentIds.has(stu.id)}
+                            onChange={(e) => {
+                              const newSet = new Set(selectedImportStudentIds);
+                              if (e.target.checked) newSet.add(stu.id);
+                              else newSet.delete(stu.id);
+                              setSelectedImportStudentIds(newSet);
+                            }}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                          />
+                          <div>
+                            <div className="text-xs font-bold text-slate-900">{stu.lastName}, {stu.firstName}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+
+            <div className="bg-slate-100 px-4 py-3 border-t border-slate-200 flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-700">
+                {selectedImportStudentIds.size} seleccionados
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsImportModalOpen(false)}
+                  className="px-3 py-1.5 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteImport}
+                  disabled={selectedImportStudentIds.size === 0}
+                  className="px-3.5 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs disabled:opacity-50"
+                >
+                  Importar Alumnos
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -38,7 +38,8 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const navItems = [
     { id: 'dashboard' as ActiveScreen, label: 'Inicio', icon: LayoutDashboard },
-    { id: 'groups_students' as ActiveScreen, label: 'Grupos y Alumnos', icon: Users },
+    { id: 'global_students' as ActiveScreen, label: 'Directorio Global', icon: Users },
+    { id: 'groups_students' as ActiveScreen, label: 'Mis Grupos', icon: FolderGit2 },
     { id: 'attendance' as ActiveScreen, label: 'Pase de Lista', icon: CheckSquare },
     { id: 'grades' as ActiveScreen, label: 'Calificaciones', icon: GraduationCap },
     { id: 'reports' as ActiveScreen, label: 'Reportes y Sábanas', icon: FileSpreadsheet },

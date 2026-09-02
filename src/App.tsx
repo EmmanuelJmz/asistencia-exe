@@ -4,6 +4,7 @@ import { dbService } from './db/databaseService';
 import { AuthPinScreen } from './components/AuthPinScreen';
 import { Header } from './components/Header';
 import { DashboardScreen } from './components/DashboardScreen';
+import { GlobalStudentsScreen } from './components/GlobalStudentsScreen';
 import { GroupsStudentsScreen } from './components/GroupsStudentsScreen';
 import { AttendanceScreen } from './components/AttendanceScreen';
 import { GradesFunnelScreen } from './components/GradesFunnelScreen';
@@ -45,8 +46,15 @@ export function App() {
     }
   };
 
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    refreshData();
+    const init = async () => {
+      await dbService.loadFromCloud();
+      refreshData();
+      setIsLoading(false);
+    };
+    init();
   }, []);
 
   useEffect(() => {
@@ -73,6 +81,10 @@ export function App() {
   };
 
   // If not authenticated, show the 4-digit PIN screen
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900"><div className="text-xl font-bold text-blue-600 animate-pulse">Descargando datos desde la nube...</div></div>;
+  }
+
   if (!isAuthenticated) {
     return <AuthPinScreen onAuthenticated={() => setIsAuthenticated(true)} />;
   }
@@ -109,6 +121,13 @@ export function App() {
               setSelectedGroupId(gid);
               setCurrentScreen('grades');
             }}
+          />
+        )}
+
+        {currentScreen === 'global_students' && (
+          <GlobalStudentsScreen
+            students={students}
+            onDataChanged={refreshData}
           />
         )}
 
