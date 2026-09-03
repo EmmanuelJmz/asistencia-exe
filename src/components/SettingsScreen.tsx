@@ -38,9 +38,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [confirmPin, setConfirmPin] = useState('');
   const [pinFeedback, setPinFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [settingsFeedback, setSettingsFeedback] = useState<string | null>(null);
-
-  // Danger zone toggle
-  const [isDangerZoneOpen, setIsDangerZoneOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -114,13 +111,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     reader.readAsText(file);
   };
 
-  const handleCleanToEmpty = () => {
-    alert('Esta función de borrado masivo ha sido desactivada por seguridad en el entorno de la nube (Supabase). Para vaciar la base de datos, por favor contacte al administrador o elimine los grupos uno por uno.');
-  };
-
-  const handleLoadDemo = () => {
-    alert('La carga de datos de demostración ha sido desactivada para evitar corromper tu base de datos real en la nube.');
-  };
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto">
@@ -325,117 +315,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
       </div>
 
-      {/* ================= ZONA DE PELIGRO / HERRAMIENTAS TÉCNICAS ================= */}
-      <div className="border border-red-300 rounded overflow-hidden shadow-xs bg-white">
-        <div 
-          onClick={() => setIsDangerZoneOpen(!isDangerZoneOpen)}
-          className="bg-red-50/70 px-4 py-2.5 border-b border-red-200 flex items-center justify-between cursor-pointer select-none hover:bg-red-100/70 transition-colors"
-        >
-          <div className="flex items-center gap-2 text-red-900 font-bold text-xs">
-            <AlertTriangle className="w-4 h-4 text-red-600" />
-            <span>Zona de Peligro y Herramientas Avanzadas</span>
-            <span className="text-[10px] font-normal px-2 py-0.5 rounded bg-red-200 text-red-900 border border-red-300">
-              Opciones Críticas
-            </span>
-          </div>
-          <div className="flex items-center gap-1 text-red-800 text-xs font-semibold">
-            <span>{isDangerZoneOpen ? 'Ocultar Opciones' : 'Mostrar Opciones'}</span>
-            {isDangerZoneOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </div>
-        </div>
 
-        {isDangerZoneOpen && (
-          <div className="p-4 space-y-4 bg-red-50/20 text-xs">
-            <div className="p-3 rounded bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start gap-2">
-              <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-bold">Advertencia de Seguridad:</p>
-                <p className="text-[11px] leading-relaxed text-amber-800">
-                  Las funciones contenidas en esta sección son para administración avanzada, soporte técnico y mantenimiento de bajo nivel. Utilícelas con precaución.
-                </p>
-              </div>
-            </div>
-
-            {/* Danger Row 1: Reset System to Clean State */}
-            <div className="p-3 rounded bg-white border border-red-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-0.5 max-w-xl">
-                <h4 className="font-bold text-red-900">Vaciar y Limpiar Sistema a Cero</h4>
-                <p className="text-[11px] text-slate-600">
-                  Elimina de manera permanente todos los grupos, alumnos, asistencias y calificaciones existentes para dejar el sistema totalmente limpio para el inicio del ciclo escolar.
-                </p>
-              </div>
-              <button
-                onClick={handleCleanToEmpty}
-                className="shrink-0 px-3 py-1.5 rounded bg-red-600 hover:bg-red-700 text-white font-semibold text-xs border border-red-700 shadow-xs transition-colors flex items-center gap-1.5"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Vaciar Base de Datos a Cero</span>
-              </button>
-            </div>
-
-            {/* Danger Row 2: Load Demo Data */}
-            <div className="p-3 rounded bg-white border border-slate-300 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-0.5 max-w-xl">
-                <h4 className="font-bold text-slate-900">Cargar Datos de Demostración</h4>
-                <p className="text-[11px] text-slate-600">
-                  Carga un conjunto de grupos escolares, alumnos y calificaciones simuladas para evaluar las funciones del sistema.
-                </p>
-              </div>
-              <button
-                onClick={handleLoadDemo}
-                className="shrink-0 px-3 py-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs border border-slate-300 shadow-xs transition-colors flex items-center gap-1.5"
-              >
-                <Layers className="w-3.5 h-3.5 text-blue-700" />
-                <span>Cargar Datos Demo</span>
-              </button>
-            </div>
-
-            {/* Danger Row 3: SQL Inspector & DDL Schemas */}
-            {onOpenSqliteInspector && (
-              <div className="p-3 rounded bg-white border border-slate-300 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="space-y-0.5 max-w-xl">
-                  <h4 className="font-bold text-slate-900">Auditoría Técnica: Inspector SQLite y Esquemas DDL</h4>
-                  <p className="text-[11px] text-slate-600">
-                    Abre el explorador de bajo nivel para consultar tablas internas, verificar integridad referencial y auditar esquemas relacionales.
-                  </p>
-                </div>
-                <button
-                  onClick={onOpenSqliteInspector}
-                  className="shrink-0 px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs border border-slate-900 shadow-xs transition-colors flex items-center gap-1.5"
-                >
-                  <FileCode className="w-3.5 h-3.5 text-teal-400" />
-                  <span>Abrir Inspector SQLite</span>
-                </button>
-              </div>
-            )}
-
-            {/* Danger Row 4: Packaging and EXE instructions */}
-            <div className="p-3 rounded bg-white border border-slate-300 shadow-xs space-y-2">
-              <div className="flex items-center gap-2 text-slate-900 font-bold">
-                <Terminal className="w-4 h-4 text-blue-700" />
-                <span>Generación del Instalador .EXE para Computadora (Electron)</span>
-              </div>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                Comandos de terminal para compilar el instalador ejecutable de Windows en su equipo local:
-              </p>
-              <div className="p-2.5 rounded bg-slate-900 text-slate-200 font-mono text-[11px] space-y-1.5 border border-slate-700">
-                <div className="text-slate-400 text-[10px] pb-1 border-b border-slate-800 flex justify-between">
-                  <span>Terminal / Símbolo del Sistema</span>
-                  <span>Windows x64 (.exe)</span>
-                </div>
-                <p className="text-slate-400"># Instalar librerías del proyecto:</p>
-                <p className="text-white font-bold">npm install</p>
-                <p className="text-slate-400 pt-1"># Compilar instalador ejecutable de Windows:</p>
-                <p className="text-emerald-400 font-bold">npm run dist</p>
-                <p className="text-slate-400 text-[10px] pt-1">
-                  El archivo instalador <span className="text-amber-300 font-semibold">EduGestion-Setup-1.0.0.exe</span> se generará en la carpeta <span className="text-amber-300 font-semibold">dist-electron/</span>.
-                </p>
-              </div>
-            </div>
-
-          </div>
-        )}
-      </div>
 
     </div>
   );
