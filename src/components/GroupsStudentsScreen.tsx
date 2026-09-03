@@ -721,28 +721,14 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
 
               {/* Advanced fields hidden for simplicity, defaults will be used */}
               
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Turno:</label>
-                  <select
-                    value={groupForm.shift}
-                    onChange={(e) => setGroupForm({ ...groupForm, shift: e.target.value as any })}
-                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
-                  >
-                    <option value="Matutino">Matutino</option>
-                    <option value="Vespertino">Vespertino</option>
-                    <option value="Nocturno">Nocturno</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Color Identificador:</label>
-                  <input
-                    type="color"
-                    value={groupForm.colorHex}
-                    onChange={(e) => setGroupForm({ ...groupForm, colorHex: e.target.value })}
-                    className="w-full h-8 rounded bg-white border border-slate-300 cursor-pointer"
-                  />
-                </div>
+              <div className="mb-4">
+                <label className="font-semibold text-slate-700 block mb-1">Color Identificador:</label>
+                <input
+                  type="color"
+                  value={groupForm.colorHex}
+                  onChange={(e) => setGroupForm({ ...groupForm, colorHex: e.target.value })}
+                  className="w-full h-10 rounded bg-white border border-slate-300 cursor-pointer"
+                />
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
@@ -787,28 +773,14 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
 
               {/* Advanced fields hidden for simplicity */}
               
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Turno:</label>
-                  <select
-                    value={groupForm.shift}
-                    onChange={(e) => setGroupForm({ ...groupForm, shift: e.target.value as any })}
-                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
-                  >
-                    <option value="Matutino">Matutino</option>
-                    <option value="Vespertino">Vespertino</option>
-                    <option value="Nocturno">Nocturno</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Color Identificador:</label>
-                  <input
-                    type="color"
-                    value={groupForm.colorHex}
-                    onChange={(e) => setGroupForm({ ...groupForm, colorHex: e.target.value })}
-                    className="w-full h-8 rounded bg-white border border-slate-300 cursor-pointer"
-                  />
-                </div>
+              <div className="mb-4">
+                <label className="font-semibold text-slate-700 block mb-1">Color Identificador:</label>
+                <input
+                  type="color"
+                  value={groupForm.colorHex}
+                  onChange={(e) => setGroupForm({ ...groupForm, colorHex: e.target.value })}
+                  className="w-full h-10 rounded bg-white border border-slate-300 cursor-pointer"
+                />
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
