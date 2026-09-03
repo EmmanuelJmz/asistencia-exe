@@ -15,8 +15,12 @@ import { SqliteInspectorModal } from './components/SqliteInspectorModal';
 export function App() {
   const [session, setSession] = useState<any>(null);
   const [isInitializingAuth, setIsInitializingAuth] = useState(true);
-  const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('dashboard');
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [currentScreen, setCurrentScreen] = useState<ActiveScreen>(() => {
+    return (localStorage.getItem('currentScreen') as ActiveScreen) || 'dashboard';
+  });
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(() => {
+    return localStorage.getItem('selectedGroupId') || null;
+  });
   const [isSqliteModalOpen, setIsSqliteModalOpen] = useState<boolean>(false);
 
   // Core Data States from local SQLite database repository
@@ -85,6 +89,18 @@ export function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [settings.theme]);
+
+  useEffect(() => {
+    localStorage.setItem('currentScreen', currentScreen);
+  }, [currentScreen]);
+
+  useEffect(() => {
+    if (selectedGroupId) {
+      localStorage.setItem('selectedGroupId', selectedGroupId);
+    } else {
+      localStorage.removeItem('selectedGroupId');
+    }
+  }, [selectedGroupId]);
 
   const handleSelectScreen = (screen: ActiveScreen) => {
     if (screen === 'sqlite_explorer') {

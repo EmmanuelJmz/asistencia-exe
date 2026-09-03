@@ -51,6 +51,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
   const [importSearchQuery, setImportSearchQuery] = useState('');
   const [selectedImportStudentIds, setSelectedImportStudentIds] = useState<Set<string>>(new Set());
   const [studentViewMode, setStudentViewMode] = useState<'list' | 'grid'>('list');
+  const [groupViewMode, setGroupViewMode] = useState<'list' | 'grid'>('list');
 
   // Form states for Group
   const [groupForm, setGroupForm] = useState({
@@ -299,19 +300,37 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
         <div className="lg:col-span-4 bg-white border border-slate-300 rounded shadow-xs overflow-hidden">
           <div className="bg-slate-100 px-3 py-2 border-b border-slate-300 flex items-center justify-between">
             <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-              Grupos Registrados ({groups.length})
+              Grupos ({groups.length})
             </span>
-            <button
-              onClick={handleOpenNewGroup}
-              className="text-[11px] text-blue-700 hover:underline font-semibold"
-            >
-              + Añadir
-            </button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center bg-white border border-slate-300 rounded p-0.5 shrink-0">
+                <button
+                  onClick={() => setGroupViewMode('list')}
+                  className={`p-1 rounded ${groupViewMode === 'list' ? 'bg-slate-200 text-slate-800 shadow-xs' : 'text-slate-400 hover:text-slate-600'} transition-colors`}
+                  title="Vista de Lista"
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setGroupViewMode('grid')}
+                  className={`p-1 rounded ${groupViewMode === 'grid' ? 'bg-slate-200 text-slate-800 shadow-xs' : 'text-slate-400 hover:text-slate-600'} transition-colors`}
+                  title="Vista de Tarjetas"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <button
+                onClick={handleOpenNewGroup}
+                className="text-[11px] text-blue-700 hover:underline font-semibold"
+              >
+                + Añadir
+              </button>
+            </div>
           </div>
 
-          <div className="p-2 space-y-1 bg-slate-50/50 max-h-[550px] overflow-y-auto">
+          <div className={`p-2 bg-slate-50/50 max-h-[550px] overflow-y-auto ${groupViewMode === 'grid' ? 'grid grid-cols-2 gap-2' : 'space-y-1'}`}>
             {groups.length === 0 ? (
-              <div className="p-4 text-center text-slate-500 text-xs leading-relaxed">
+              <div className="col-span-full p-4 text-center text-slate-500 text-xs leading-relaxed">
                 No hay grupos escolares dados de alta. Haga clic en <strong className="text-blue-700 font-semibold">+ Añadir</strong> para registrar el primer grupo.
               </div>
             ) : (
@@ -319,6 +338,49 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
               const isSelected = activeGroup && activeGroup.id === group.id;
               const count = students.filter(s => s.groupId === group.id).length;
               const activeCount = students.filter(s => s.groupId === group.id && s.status === 'Active').length;
+
+              if (groupViewMode === 'grid') {
+                return (
+                  <div
+                    key={group.id}
+                    onClick={() => onSelectGroup(group.id)}
+                    className={`p-2 rounded cursor-pointer border transition-colors flex flex-col justify-between ${
+                      isSelected
+                        ? 'bg-blue-50 border-blue-400 text-blue-950 font-semibold shadow-xs'
+                        : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: group.colorHex || '#1E3A8A' }}
+                      />
+                      {isSelected && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenEditGroup(); }}
+                            className="text-slate-600 hover:text-blue-800"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setDeletingGroupId(group.id); }}
+                            className="text-slate-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 line-clamp-1" title={group.name}>{group.name}</h4>
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        {count} Alumnos
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
 
               return (
                 <div
@@ -338,7 +400,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                     <div>
                       <h4 className="text-xs font-bold text-slate-900">{group.name}</h4>
                       <p className="text-[11px] text-slate-500">
-                        Turno {group.shift} • {activeCount} activos ({count} tot)
+                        {count} alumnos totales
                       </p>
                     </div>
                   </div>
@@ -657,31 +719,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Grado:</label>
-                  <input
-                    type="text"
-                    required
-                    value={groupForm.grade}
-                    onChange={(e) => setGroupForm({ ...groupForm, grade: e.target.value })}
-                    placeholder="1°, 2°, 3°..."
-                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
-                  />
-                </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Sección:</label>
-                  <input
-                    type="text"
-                    required
-                    value={groupForm.section}
-                    onChange={(e) => setGroupForm({ ...groupForm, section: e.target.value })}
-                    placeholder="A, B, C..."
-                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
-                  />
-                </div>
-              </div>
-
+              {/* Advanced fields hidden for simplicity, defaults will be used */}
+              
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="font-semibold text-slate-700 block mb-1">Turno:</label>
@@ -746,29 +785,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Grado:</label>
-                  <input
-                    type="text"
-                    required
-                    value={groupForm.grade}
-                    onChange={(e) => setGroupForm({ ...groupForm, grade: e.target.value })}
-                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
-                  />
-                </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Sección:</label>
-                  <input
-                    type="text"
-                    required
-                    value={groupForm.section}
-                    onChange={(e) => setGroupForm({ ...groupForm, section: e.target.value })}
-                    className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
-                  />
-                </div>
-              </div>
-
+              {/* Advanced fields hidden for simplicity */}
+              
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="font-semibold text-slate-700 block mb-1">Turno:</label>
