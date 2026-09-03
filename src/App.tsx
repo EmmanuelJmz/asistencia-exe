@@ -41,10 +41,6 @@ export function App() {
     setPeriods(pers);
     setSettings(sets);
     setStats(st);
-
-    if (!selectedGroupId && grps.length > 0) {
-      setSelectedGroupId(grps[0].id);
-    }
   };
 
   const [isLoading, setIsLoading] = useState(true);

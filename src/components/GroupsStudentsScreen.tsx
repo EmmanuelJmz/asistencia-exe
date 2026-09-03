@@ -32,7 +32,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
   onSelectGroup,
   onDataChanged,
 }) => {
-  const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
+  const activeGroup = groups.find(g => g.id === selectedGroupId) || null;
 
   // Search filter
   const [searchQuery, setSearchQuery] = useState('');
