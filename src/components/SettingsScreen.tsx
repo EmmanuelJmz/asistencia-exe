@@ -115,19 +115,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   };
 
   const handleCleanToEmpty = () => {
-    if (window.confirm('¿ATENCIÓN: Desea vaciar completamente el sistema? Todos los grupos, alumnos, asistencias y calificaciones serán eliminados para dejar el sistema 100% limpio y listo para su ciclo escolar.')) {
-      dbService.resetToEmptyProduction();
-      onDataReset();
-      window.location.reload();
-    }
+    alert('Esta función de borrado masivo ha sido desactivada por seguridad en el entorno de la nube (Supabase). Para vaciar la base de datos, por favor contacte al administrador o elimine los grupos uno por uno.');
   };
 
   const handleLoadDemo = () => {
-    if (window.confirm('¿Desea cargar los datos de demostración? Esto insertará grupos, alumnos y calificaciones de prueba.')) {
-      dbService.loadDemoData();
-      onDataReset();
-      window.location.reload();
-    }
+    alert('La carga de datos de demostración ha sido desactivada para evitar corromper tu base de datos real en la nube.');
   };
 
   return (

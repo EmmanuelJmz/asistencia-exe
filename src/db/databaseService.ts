@@ -309,7 +309,14 @@ class SupabaseService {
 
   // ==================== STATS ====================
   public getStats(): DatabaseStats {
-    return { totalGroups: this.groups.length, totalStudents: this.students.length, activeStudents: this.students.filter(s => s.status === 'Active').length, totalAttendanceRecords: this.attendanceRecords.length, totalGrades: this.grades.length };
+    const validGroups = this.getGroups();
+    return { 
+      totalGroups: validGroups.length, 
+      totalStudents: this.students.length, 
+      activeStudents: this.students.filter(s => s.status === 'Active').length, 
+      totalAttendanceRecords: this.attendanceRecords.length, 
+      totalGrades: this.grades.length 
+    };
   }
   public getRawTables() { return { groups: this.groups, students: this.students, sessions: this.sessions, attendanceRecords: this.attendanceRecords, subjects: this.subjects, periods: this.periods, activities: this.activities, grades: this.grades, security: this.security }; }
   public loadDemoData(): void {}
