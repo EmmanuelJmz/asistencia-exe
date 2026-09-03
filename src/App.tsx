@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ActiveScreen, Group, Student, Subject, Period, UserSettings, DatabaseStats } from './types';
 import { dbService } from './db/databaseService';
-import { AuthPinScreen } from './components/AuthPinScreen';
+import { LoginScreen } from './components/LoginScreen';
 import { Header } from './components/Header';
 import { DashboardScreen } from './components/DashboardScreen';
 import { GlobalStudentsScreen } from './components/GlobalStudentsScreen';
@@ -13,7 +13,8 @@ import { SettingsScreen } from './components/SettingsScreen';
 import { SqliteInspectorModal } from './components/SqliteInspectorModal';
 
 export function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [session, setSession] = useState<any>(null);
+  const [isInitializingAuth, setIsInitializingAuth] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('dashboard');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isSqliteModalOpen, setIsSqliteModalOpen] = useState<boolean>(false);
@@ -50,11 +51,35 @@ export function App() {
 
   useEffect(() => {
     const init = async () => {
-      await dbService.loadFromCloud();
-      refreshData();
-      setIsLoading(false);
+      // 1. Check current session
+      const currentSession = await dbService.getSession();
+      setSession(currentSession);
+      setIsInitializingAuth(false);
+      
+      // Only load data if we have a session
+      if (currentSession) {
+        setIsLoading(true);
+        await dbService.loadFromCloud();
+        refreshData();
+        setIsLoading(false);
+      }
     };
     init();
+
+    // 2. Listen for auth changes (login/logout)
+    const { data: authListener } = dbService.onAuthStateChange(async (newSession) => {
+      setSession(newSession);
+      if (newSession) {
+        setIsLoading(true);
+        await dbService.loadFromCloud();
+        refreshData();
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -76,17 +101,20 @@ export function App() {
     setCurrentScreen(screen);
   };
 
-  const handleLockApp = () => {
-    setIsAuthenticated(false);
+  const handleLockApp = async () => {
+    await dbService.logout();
   };
 
-  // If not authenticated, show the 4-digit PIN screen
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900"><div className="text-xl font-bold text-blue-600 animate-pulse">Descargando datos desde la nube...</div></div>;
+  if (isInitializingAuth) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900"><div className="text-xl font-bold text-slate-500 animate-pulse">Conectando...</div></div>;
   }
 
-  if (!isAuthenticated) {
-    return <AuthPinScreen onAuthenticated={() => setIsAuthenticated(true)} />;
+  if (!session) {
+    return <LoginScreen />;
+  }
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900"><div className="flex items-center gap-3"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div><div className="text-xl font-bold text-slate-600">Sincronizando con la nube...</div></div></div>;
   }
 
   return (

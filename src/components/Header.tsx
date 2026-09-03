@@ -99,10 +99,10 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onLockApp}
             className="flex items-center gap-1.5 px-3 py-1 rounded bg-red-950/70 hover:bg-red-900 text-red-200 border border-red-800 text-xs font-semibold transition-colors shadow-xs"
-            title="Bloquear sesión con PIN"
+            title="Cerrar sesión"
           >
             <Lock className="w-3.5 h-3.5 text-red-300" />
-            <span>Bloquear</span>
+            <span>Cerrar Sesión</span>
           </button>
         </div>
       </div>

@@ -287,17 +287,30 @@ class SupabaseService {
     this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
   }
 
-  // ==================== SECURITY & SETTINGS ====================
-  public getSecurityConfig(): SecurityConfig { return { ...this.security }; }
-  public verifyPin(inputPin: string): { success: boolean; message: string; remainingAttempts: number; isLocked: boolean } {
-    if (inputPin === this.security.pin) return { success: true, message: 'Acceso correcto', remainingAttempts: 5, isLocked: false };
-    return { success: false, message: 'PIN incorrecto.', remainingAttempts: 4, isLocked: false };
+  // ==================== SECURITY & AUTHENTICATION ====================
+  public async login(username: string, password: string) {
+    const email = `${username.toLowerCase().trim()}@admin.local`;
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw new Error(error.message);
+    return data;
   }
-  public updatePin(newPin: string): boolean { 
-    this.security.pin = newPin; 
-    this.persistLocal(STORAGE_KEYS.SECURITY, this.security); 
-    this.bgUpsert('security_config', this.security);
-    return true; 
+
+  public async logout() {
+    await supabase.auth.signOut();
+  }
+
+  public async getSession() {
+    const { data } = await supabase.auth.getSession();
+    return data.session;
+  }
+
+  public onAuthStateChange(callback: (session: any) => void) {
+    return supabase.auth.onAuthStateChange((_event, session) => {
+      callback(session);
+    });
   }
   
   public getSettings(): UserSettings { return { ...this.settings }; }
