@@ -97,7 +97,9 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
   const handleExportCSV = async () => {
     if (!activeGroup) return;
 
-    let csvContent = currentTab === 'attendance' 
+    // Se añade el BOM \uFEFF para que Excel reconozca correctamente los acentos (UTF-8)
+    let csvContent = '\uFEFF';
+    csvContent += currentTab === 'attendance' 
       ? 'N_Lista,Apellidos,Nombres,Estatus,Asistencias,Faltas,Retardos,Justificadas,Porcentaje_Asistencia\n'
       : 'N_Lista,Apellidos,Nombres,Estatus,Promedio_Calificacion\n';
 
@@ -378,17 +380,6 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
           </table>
         </div>
 
-        {/* Printable Signature Footers */}
-        <div className="pt-10 grid grid-cols-2 gap-12 text-center text-xs">
-          <div className="border-t border-slate-400 pt-2">
-            <p className="font-bold text-slate-900">{settings.teacherName}</p>
-            <p className="text-slate-500 text-[11px]">Firma del Docente Titular</p>
-          </div>
-          <div className="border-t border-slate-400 pt-2">
-            <p className="font-bold text-slate-900">Dirección del Plantel Escolar</p>
-            <p className="text-slate-500 text-[11px]">Sello y Firma de Dirección</p>
-          </div>
-        </div>
       </div>
     </div>
   );
