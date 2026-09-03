@@ -42,6 +42,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
   const [isEditGroupModalOpen, setIsEditGroupModalOpen] = useState(false);
   const [isNewStudentModalOpen, setIsNewStudentModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [movingStudent, setMovingStudent] = useState<Student | null>(null);
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
@@ -93,10 +94,13 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
     setIsNewGroupModalOpen(true);
   };
 
-  const handleSaveNewGroup = (e: React.FormEvent) => {
+  const handleSaveNewGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!groupForm.name.trim()) return;
+    setIsSaving(true);
+    await new Promise(resolve => setTimeout(resolve, 600));
     const newGrp = dbService.addGroup(groupForm);
+    setIsSaving(false);
     onDataChanged();
     onSelectGroup(newGrp.id);
     setIsNewGroupModalOpen(false);
@@ -115,13 +119,16 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
     setIsEditGroupModalOpen(true);
   };
 
-  const handleSaveEditGroup = (e: React.FormEvent) => {
+  const handleSaveEditGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeGroup) return;
+    setIsSaving(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
     dbService.updateGroup({
       ...activeGroup,
       ...groupForm,
     });
+    setIsSaving(false);
     onDataChanged();
     setIsEditGroupModalOpen(false);
   };
@@ -149,9 +156,13 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
     setIsNewStudentModalOpen(true);
   };
 
-  const handleSaveNewStudent = (e: React.FormEvent) => {
+  const handleSaveNewStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeGroup || !studentForm.firstName.trim() || !studentForm.lastName.trim()) return;
+    setIsSaving(true);
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     dbService.addStudent({
       groupId: activeGroup.id,
       firstName: studentForm.firstName.trim(),
@@ -160,6 +171,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
       status: studentForm.status,
       notes: studentForm.notes?.trim(),
     });
+    
+    setIsSaving(false);
     onDataChanged();
     setIsNewStudentModalOpen(false);
   };
@@ -170,8 +183,12 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
     setIsImportModalOpen(true);
   };
 
-  const handleExecuteImport = () => {
+  const handleExecuteImport = async () => {
     if (!activeGroup || selectedImportStudentIds.size === 0) return;
+    setIsSaving(true);
+    
+    await new Promise(resolve => setTimeout(resolve, 800)); // Un poco más largo para importar varios
+
     let nextRoll = students.filter(s => s.groupId === activeGroup.id).length + 1;
     
     selectedImportStudentIds.forEach(stuId => {
@@ -187,6 +204,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
         });
       }
     });
+    
+    setIsSaving(false);
     onDataChanged();
     setIsImportModalOpen(false);
   };
@@ -839,9 +858,17 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs"
+                  disabled={isSaving}
+                  className="px-3.5 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
-                  {editingStudent ? 'Guardar Cambios' : 'Registrar Alumno'}
+                  {isSaving ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Procesando...</span>
+                    </>
+                  ) : (
+                    <span>{editingStudent ? 'Guardar Cambios' : 'Registrar Alumno'}</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -940,10 +967,17 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                 <button
                   type="button"
                   onClick={handleExecuteImport}
-                  disabled={selectedImportStudentIds.size === 0}
-                  className="px-3.5 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs disabled:opacity-50"
+                  disabled={selectedImportStudentIds.size === 0 || isSaving}
+                  className="px-3.5 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  Importar Alumnos
+                  {isSaving ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Importando...</span>
+                    </>
+                  ) : (
+                    <span>Importar Alumnos</span>
+                  )}
                 </button>
               </div>
             </div>
