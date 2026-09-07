@@ -224,26 +224,26 @@ class SupabaseService {
   public getPeriods(): Period[] { return [...this.periods].sort((a, b) => a.orderIndex - b.orderIndex); }
 
   // ==================== GRADES ====================
-  public getGrades(groupId: string, subjectId: string, periodId: string, category?: GradeCategory, activityTitle?: string): Grade[] {
-    return this.grades.filter(g => g.groupId === groupId && g.subjectId === subjectId && g.periodId === periodId && (!category || g.category === category) && (!activityTitle || g.activityTitle === activityTitle));
+  public getGrades(groupId: string, subjectId: string, periodId: string, category?: GradeCategory, activityId?: string): Grade[] {
+    return this.grades.filter(g => g.groupId === groupId && g.subjectId === subjectId && g.periodId === periodId && (!category || g.category === category) && (!activityId || g.activityId === activityId));
   }
   public getAllGradesForGroup(groupId: string): Grade[] { return this.grades.filter(g => g.groupId === groupId); }
-  public setStudentScore(stuId: string, grpId: string, subId: string, perId: string, cat: GradeCategory, title: string, score: number, obs?: string): Grade {
-    let grd = this.grades.find(g => g.studentId === stuId && g.groupId === grpId && g.subjectId === subId && g.periodId === perId && g.category === cat && g.activityTitle === title);
+  public setStudentScore(stuId: string, grpId: string, subId: string, perId: string, cat: GradeCategory, title: string, score: number, obs?: string, activityId?: string): Grade {
+    let grd = this.grades.find(g => g.studentId === stuId && g.groupId === grpId && g.subjectId === subId && g.periodId === perId && (activityId ? g.activityId === activityId : g.activityTitle === title));
     if (grd) {
       grd.score = score;
       if (obs !== undefined) grd.observation = obs;
       grd.updatedAt = new Date().toISOString();
     } else {
-      grd = { id: 'grd-' + Date.now().toString(36), studentId: stuId, groupId: grpId, subjectId: subId, periodId: perId, category: cat, activityTitle: title, score, observation: obs || '', updatedAt: new Date().toISOString() };
+      grd = { id: 'grd-' + Date.now().toString(36), studentId: stuId, groupId: grpId, subjectId: subId, periodId: perId, category: cat, activityTitle: title, activityId: activityId, score, observation: obs || '', updatedAt: new Date().toISOString() };
       this.grades.push(grd);
     }
     this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
     this.bgUpsert('grades', grd);
     return grd;
   }
-  public saveAllGrades(groupId: string, subjectId: string, periodId: string, category: GradeCategory, activityTitle: string, studentGrades: Array<{ studentId: string; score: number; observation?: string }>): void {
-    studentGrades.forEach(sg => this.setStudentScore(sg.studentId, groupId, subjectId, periodId, category, activityTitle, sg.score, sg.observation));
+  public saveAllGrades(groupId: string, subjectId: string, periodId: string, category: GradeCategory, activityTitle: string, studentGrades: Array<{ studentId: string; score: number; observation?: string }>, activityId?: string): void {
+    studentGrades.forEach(sg => this.setStudentScore(sg.studentId, groupId, subjectId, periodId, category, activityTitle, sg.score, sg.observation, activityId));
   }
 
   // ==================== ACTIVITIES ====================
