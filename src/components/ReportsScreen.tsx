@@ -36,6 +36,8 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
 }) => {
   const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
   const [currentTab, setCurrentTab] = useState<'attendance' | 'grades'>('attendance');
+  const [reportScope, setReportScope] = useState<'all' | 'date'>('all');
+  const [selectedReportDate, setSelectedReportDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
 
   const raw = dbService.getRawTables();
@@ -51,8 +53,13 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
   // Calculate statistics for each student
   const studentReports = groupStudents.map(student => {
-    // Attendance stats
-    const studentRecords = raw.attendanceRecords.filter(r => r.studentId === student.id);
+    // Attendance stats (filtered by scope date if selected)
+    let studentRecords = raw.attendanceRecords.filter(r => r.studentId === student.id);
+    if (reportScope === 'date') {
+      const daySessions = raw.sessions.filter(s => s.groupId === activeGroup?.id && s.date === selectedReportDate).map(s => s.id);
+      studentRecords = studentRecords.filter(r => daySessions.includes(r.sessionId));
+    }
+
     const totalSessions = studentRecords.length;
     const presentes = studentRecords.filter(r => r.status === 'Presente').length;
     const faltas = studentRecords.filter(r => r.status === 'Falta').length;
@@ -65,9 +72,12 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
       g => g.studentId === student.id && g.groupId === activeGroup?.id
     );
 
+    const activityScoresMap: Record<string, number> = {};
     const studentScores = groupActivities.map(act => {
       const found = studentGrades.find(g => g.activityId === act.id);
-      return found ? found.score : 0;
+      const val = found ? found.score : 0;
+      activityScoresMap[act.id] = val;
+      return val;
     });
 
     const avgGrade = groupActivities.length > 0
@@ -83,6 +93,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
       justificadas,
       attPct,
       studentGrades,
+      activityScoresMap,
       avgGrade,
     };
   });
@@ -106,14 +117,11 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
     // Se añade el BOM \uFEFF para que Excel reconozca correctamente los acentos (UTF-8)
     let csvContent = '\uFEFF';
-    csvContent += currentTab === 'attendance' 
-      ? 'N_Lista,Apellidos,Nombres,Estatus,Asistencias,Faltas,Retardos,Justificadas,Porcentaje_Asistencia\n'
-      : 'N_Lista,Apellidos,Nombres,Estatus,Promedio_Calificacion\n';
-
-    studentReports.forEach(r => {
-      let row = '';
-      if (currentTab === 'attendance') {
-        row = [
+    
+    if (currentTab === 'attendance') {
+      csvContent += 'N_Lista,Apellidos,Nombres,Estatus,Asistencias,Faltas,Retardos,Justificadas,Porcentaje_Asistencia\n';
+      studentReports.forEach(r => {
+        const row = [
           r.student.rollNumber,
           `"${r.student.lastName.replace(/"/g, '""')}"`,
           `"${r.student.firstName.replace(/"/g, '""')}"`,
@@ -124,20 +132,31 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
           r.justificadas,
           `${r.attPct}%`
         ].join(',');
-      } else {
-        row = [
+        csvContent += row + '\n';
+      });
+    } else {
+      // Detailed Grades Export: Includes columns for EVERY activity + final average
+      const actHeaders = groupActivities.map(a => `"${a.title.replace(/"/g, '""')} (${a.dueDate})"`);
+      const headerRow = ['N_Lista', 'Apellidos', 'Nombres', 'Estatus', ...actHeaders, 'Promedio_Final'].join(',');
+      csvContent += headerRow + '\n';
+
+      studentReports.forEach(r => {
+        const actVals = groupActivities.map(a => r.activityScoresMap[a.id] ?? 0);
+        const row = [
           r.student.rollNumber,
           `"${r.student.lastName.replace(/"/g, '""')}"`,
           `"${r.student.firstName.replace(/"/g, '""')}"`,
           r.student.status,
+          ...actVals,
           r.avgGrade
         ].join(',');
-      }
-      csvContent += row + '\n';
-    });
+        csvContent += row + '\n';
+      });
+    }
 
     const prefix = currentTab === 'attendance' ? 'Asistencia' : 'Calificaciones';
-    const defaultFilename = `Reporte_${prefix}_${activeGroup.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    const scopeLabel = reportScope === 'date' ? `_Fecha_${selectedReportDate}` : '_General';
+    const defaultFilename = `Reporte_${prefix}_${activeGroup.name.replace(/\s+/g, '_')}${scopeLabel}.csv`;
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -192,7 +211,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
         </div>
 
         {/* Filter Controls Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2.5 border-t border-slate-200 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2.5 border-t border-slate-200 text-xs">
           <div>
             <label className="font-semibold text-slate-700 block mb-1">Grupo Escolar:</label>
             <select
@@ -207,6 +226,29 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="font-semibold text-slate-700 block mb-1">Alcance del Reporte:</label>
+            <div className="flex items-center gap-2">
+              <select
+                value={reportScope}
+                onChange={(e) => setReportScope(e.target.value as 'all' | 'date')}
+                className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-xs text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+              >
+                <option value="all">General (Histórico Acumulado)</option>
+                <option value="date">Por Fecha Específica</option>
+              </select>
+              {reportScope === 'date' && (
+                <input
+                  type="date"
+                  value={selectedReportDate}
+                  onChange={(e) => setSelectedReportDate(e.target.value)}
+                  className="px-2 py-1 rounded bg-white border border-slate-300 text-xs font-mono focus:outline-none focus:border-blue-600 shadow-inner"
+                />
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="font-semibold text-slate-700 block mb-1">Tipo de Reporte:</label>
             <div className="flex items-center bg-slate-100 border border-slate-300 rounded p-1">
@@ -219,7 +261,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                 }`}
               >
                 <CheckSquare className="w-3.5 h-3.5" />
-                Reporte de Asistencias
+                Asistencias
               </button>
               <button
                 onClick={() => setCurrentTab('grades')}
@@ -230,7 +272,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                 }`}
               >
                 <GraduationCap className="w-3.5 h-3.5" />
-                Reporte de Calificaciones
+                Calificaciones
               </button>
             </div>
           </div>
