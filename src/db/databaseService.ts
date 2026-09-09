@@ -108,7 +108,15 @@ class SupabaseService {
         this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
       }
       if (set.data && set.data.length > 0) {
-        this.settings = { ...this.settings, ...set.data[0] };
+        const s = set.data[0];
+        const mappedSettings: Partial<UserSettings> = {};
+        if (s.teachername || s.teacherName) mappedSettings.teacherName = s.teachername || s.teacherName;
+        if (s.schoolname || s.schoolName) mappedSettings.schoolName = s.schoolname || s.schoolName;
+        if (s.theme) mappedSettings.theme = s.theme;
+        if (s.fontsize || s.fontSize) mappedSettings.fontSize = s.fontsize || s.fontSize;
+        if (s.autolockminutes || s.autoLockMinutes) mappedSettings.autoLockMinutes = Number(s.autolockminutes || s.autoLockMinutes);
+
+        this.settings = { ...this.settings, ...mappedSettings };
         this.persistLocal(STORAGE_KEYS.SETTINGS, this.settings);
       }
       if (sec.data && sec.data.length > 0) {
@@ -423,6 +431,7 @@ class SupabaseService {
     this.settings = { ...this.settings, ...newSettings };
     this.persistLocal(STORAGE_KEYS.SETTINGS, this.settings);
 
+    // 1. Sync to groups table backup container
     const settingsRecord: Group = {
       id: 'grp-app-settings',
       name: JSON.stringify(this.settings),
@@ -434,6 +443,19 @@ class SupabaseService {
       createdAt: new Date().toISOString()
     };
     this.bgUpsert('groups', settingsRecord);
+
+    // 2. Sync directly to Supabase settings table (lowercase column names)
+    const settingsTableRecord = {
+      id: 'profile-1',
+      teachername: this.settings.teacherName,
+      schoolname: this.settings.schoolName,
+      theme: this.settings.theme,
+      fontsize: this.settings.fontSize,
+      autolockminutes: this.settings.autoLockMinutes,
+      updatedat: new Date().toISOString()
+    };
+    this.bgUpsert('settings', settingsTableRecord);
+
     return this.settings;
   }
 

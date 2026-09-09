@@ -142,7 +142,9 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
     setIsSavedBanner(true);
     setIsDirty(false);
     onDataChanged();
-    setTimeout(() => setIsSavedBanner(false), 3000);
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   const handleSaveNote = (studentId: string) => {

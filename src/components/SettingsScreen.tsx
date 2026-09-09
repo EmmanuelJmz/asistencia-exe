@@ -40,8 +40,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     e.preventDefault();
     const updated = dbService.updateSettings(formData);
     onSettingsChanged(updated);
-    setSettingsFeedback('Ajustes guardados correctamente.');
-    setTimeout(() => setSettingsFeedback(null), 3000);
+    setSettingsFeedback('Ajustes guardados correctamente. Recargando...');
+    setTimeout(() => {
+      window.location.reload();
+    }, 400);
   };
 
   const handleExportRawData = () => {

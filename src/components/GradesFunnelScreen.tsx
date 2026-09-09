@@ -239,7 +239,9 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
     dbService.saveActivityGrades(activeActivity.id, activeGroup.id, gradesPayload);
     setIsSavedBanner(true);
     onDataChanged();
-    setTimeout(() => setIsSavedBanner(false), 3000);
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   // Calculate metrics for the active activity being graded
