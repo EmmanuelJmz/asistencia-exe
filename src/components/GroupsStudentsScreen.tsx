@@ -997,7 +997,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                   return acc;
                 }, {} as Record<string, Student[]>);
 
-                return Object.entries(grouped).map(([groupName, stus]) => (
+                return (Object.entries(grouped) as Array<[string, Student[]]>).map(([groupName, stus]) => (
                   <div key={groupName} className="mb-3 border border-slate-200 rounded overflow-hidden">
                     <div className="bg-slate-200/60 px-3 py-1.5 text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                       Proviene de: {groupName}

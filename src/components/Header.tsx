@@ -72,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/90 border border-slate-700 text-slate-300 text-xs">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="font-medium text-slate-200">Ciclo Escolar 2025-2026</span>
+            <span className="font-medium text-slate-200">Ciclo Escolar 2026-2027</span>
             <span className="text-slate-400 text-[11px] hidden lg:inline">({stats.totalGroups} {stats.totalGroups === 1 ? 'grupo' : 'grupos'} | {stats.totalStudents} {stats.totalStudents === 1 ? 'alumno' : 'alumnos'})</span>
           </div>
 
@@ -108,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Classic Desktop Tab Navigation */}
-      <div className="bg-slate-800 px-3 flex items-end overflow-x-auto pt-1 gap-1 border-b border-slate-300">
+      <div className="bg-slate-800 dark:bg-slate-900 px-3 flex items-end overflow-x-auto pt-1 gap-1 border-b border-slate-300 dark:border-slate-700">
         {navItems.map(item => {
           const Icon = item.icon;
           const isActive = currentScreen === item.id;
@@ -118,7 +118,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onSelectScreen(item.id)}
               className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all border-t border-x rounded-t ${
                 isActive
-                  ? 'bg-white text-blue-900 border-slate-300 shadow-xs relative -mb-[1px] font-bold z-10'
+                  ? 'bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-400 border-slate-300 dark:border-slate-700 shadow-xs relative -mb-[1px] font-bold z-10'
                   : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300 hover:text-white border-transparent'
               }`}
             >

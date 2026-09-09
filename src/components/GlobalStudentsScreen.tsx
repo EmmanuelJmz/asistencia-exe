@@ -24,7 +24,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
   });
 
   const GLOBAL_POOL_ID = 'grp-global-pool';
-  const globalStudents = students.filter(s => s.groupId === GLOBAL_POOL_ID);
+  const globalStudents = students;
 
   const filteredStudents = searchQuery
     ? globalStudents.filter(s => 

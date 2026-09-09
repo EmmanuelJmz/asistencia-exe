@@ -40,11 +40,19 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
   onSelectGroup,
   onDataChanged,
 }) => {
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
+  const getLocalDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString());
   const [session, setSession] = useState<AttendanceSession | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [isSavedBanner, setIsSavedBanner] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [activeNoteStudentId, setActiveNoteStudentId] = useState<string | null>(null);
   const [tempNoteText, setTempNoteText] = useState('');
 
@@ -56,8 +64,23 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
       const data = dbService.getOrCreateAttendanceSession(activeGroup.id, selectedDate);
       setSession(data.session);
       setRecords(data.records);
+      setIsDirty(false);
     }
   }, [activeGroup, selectedDate]);
+
+  const handleGroupChange = (newGroupId: string) => {
+    if (isDirty && !window.confirm('Tienes cambios sin guardar en la asistencia actual. ¿Deseas descartarlos y cambiar de grupo?')) {
+      return;
+    }
+    onSelectGroup(newGroupId);
+  };
+
+  const handleDateChange = (newDate: string) => {
+    if (isDirty && !window.confirm('Tienes cambios sin guardar en la asistencia actual. ¿Deseas descartarlos y cambiar de fecha?')) {
+      return;
+    }
+    setSelectedDate(newDate);
+  };
 
   const activeStudents = activeGroup
     ? students
@@ -72,6 +95,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
   const handleSetStatus = (studentId: string, status: AttendanceStatus) => {
     if (!session || session.isLocked) return;
     const updated = dbService.setStudentAttendanceStatus(session.id, studentId, status);
+    setIsDirty(true);
     setRecords(prev => {
       const idx = prev.findIndex(r => r.studentId === studentId);
       if (idx >= 0) {
@@ -81,7 +105,6 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
       }
       return [...prev, updated];
     });
-    onDataChanged();
   };
 
   const handleMarkAllPresent = () => {
@@ -90,7 +113,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
     dbService.markAllPresent(session.id, studentIds);
     const reloaded = dbService.getOrCreateAttendanceSession(session.groupId, session.date);
     setRecords(reloaded.records);
-    onDataChanged();
+    setIsDirty(true);
   };
 
   const handleSaveAndLock = (lock: boolean) => {
@@ -98,6 +121,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
     const updatedSession = dbService.commitAttendanceSave(session.id, lock);
     setSession(updatedSession);
     setIsSavedBanner(true);
+    setIsDirty(false);
     onDataChanged();
     setTimeout(() => setIsSavedBanner(false), 3000);
   };
@@ -203,7 +227,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
               <label className="font-semibold text-slate-700 block mb-1">Grupo Escolar:</label>
               <select
                 value={activeGroup ? activeGroup.id : ''}
-                onChange={(e) => onSelectGroup(e.target.value)}
+                onChange={(e) => handleGroupChange(e.target.value)}
                 className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 font-medium focus:outline-none focus:border-blue-600 shadow-inner"
               >
                 {groups.map(g => (
@@ -219,7 +243,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
               <input
                 type="date"
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                onChange={(e) => handleDateChange(e.target.value)}
                 className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 font-mono focus:outline-none focus:border-blue-600 shadow-inner"
               />
             </div>

@@ -1,5 +1,6 @@
 import { Group, Student, AttendanceSession, AttendanceRecord, AttendanceStatus, StudentStatus, Subject, Period, Grade, GradeCategory, Activity, ActivityType, SecurityConfig, DatabaseStats, UserSettings } from '../types';
 import { supabase } from '../supabaseClient';
+import { INITIAL_GROUPS, INITIAL_STUDENTS, DEMO_SUBJECTS, DEMO_PERIODS } from './sqliteSchema';
 
 const STORAGE_KEYS = {
   GROUPS: 'edugestion_prod_groups_v2',
@@ -31,6 +32,10 @@ class SupabaseService {
     this.loadFromLocal();
   }
 
+  private generateId(prefix: string): string {
+    return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`;
+  }
+
   private loadFromLocal() {
     try {
       const g = localStorage.getItem(STORAGE_KEYS.GROUPS); if(g) this.groups = JSON.parse(g);
@@ -52,7 +57,7 @@ class SupabaseService {
 
   public async loadFromCloud() {
     try {
-      const [grp, stu, ses, att, sub, per, act, grd] = await Promise.all([
+      const [grp, stu, ses, att, sub, per, act, grd, set, sec] = await Promise.all([
         supabase.from('groups').select('*'),
         supabase.from('students').select('*'),
         supabase.from('attendance_sessions').select('*'),
@@ -60,16 +65,42 @@ class SupabaseService {
         supabase.from('subjects').select('*'),
         supabase.from('periods').select('*'),
         supabase.from('activities').select('*'),
-        supabase.from('grades').select('*')
+        supabase.from('grades').select('*'),
+        supabase.from('settings').select('*').limit(1),
+        supabase.from('security_config').select('*').limit(1)
       ]);
+
       if (grp.data && grp.data.length > 0) { this.groups = grp.data; this.persistLocal(STORAGE_KEYS.GROUPS, this.groups); }
       if (stu.data && stu.data.length > 0) { this.students = stu.data; this.persistLocal(STORAGE_KEYS.STUDENTS, this.students); }
       if (ses.data && ses.data.length > 0) { this.sessions = ses.data; this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions); }
-      if (att.data && att.data.length > 0) { this.attendanceRecords = att.data; this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords); }
+      if (att.data && att.data.length > 0) {
+        // Deduplicate attendance records by sessionId + studentId
+        const attMap = new Map<string, AttendanceRecord>();
+        att.data.forEach((r: AttendanceRecord) => attMap.set(`${r.sessionId}_${r.studentId}`, r));
+        this.attendanceRecords = Array.from(attMap.values());
+        this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
+      }
       if (sub.data && sub.data.length > 0) { this.subjects = sub.data; this.persistLocal(STORAGE_KEYS.SUBJECTS, this.subjects); }
       if (per.data && per.data.length > 0) { this.periods = per.data; this.persistLocal(STORAGE_KEYS.PERIODS, this.periods); }
       if (act.data && act.data.length > 0) { this.activities = act.data; this.persistLocal(STORAGE_KEYS.ACTIVITIES, this.activities); }
-      if (grd.data && grd.data.length > 0) { this.grades = grd.data; this.persistLocal(STORAGE_KEYS.GRADES, this.grades); }
+      if (grd.data && grd.data.length > 0) {
+        // Deduplicate grades
+        const grdMap = new Map<string, Grade>();
+        grd.data.forEach((g: Grade) => {
+          const key = g.activityId ? `${g.activityId}_${g.studentId}` : `${g.studentId}_${g.groupId}_${g.subjectId}_${g.periodId}_${g.activityTitle}`;
+          grdMap.set(key, g);
+        });
+        this.grades = Array.from(grdMap.values());
+        this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
+      }
+      if (set.data && set.data.length > 0) {
+        this.settings = { ...this.settings, ...set.data[0] };
+        this.persistLocal(STORAGE_KEYS.SETTINGS, this.settings);
+      }
+      if (sec.data && sec.data.length > 0) {
+        this.security = { ...this.security, ...sec.data[0] };
+        this.persistLocal(STORAGE_KEYS.SECURITY, this.security);
+      }
       
       this.ensureGlobalPool();
     } catch (e) {
@@ -99,7 +130,7 @@ class SupabaseService {
   private async bgUpsert(table: string, data: any) {
     if(!import.meta.env.VITE_SUPABASE_URL) return;
     supabase.from(table).upsert(data).then(res => {
-        if(res.error) console.error(`Error syncing ${table}:`, res.error);
+      if(res.error) console.error(`Error syncing ${table}:`, res.error);
     });
   }
   private async bgDelete(table: string, id: string) {
@@ -111,7 +142,7 @@ class SupabaseService {
   public getGroups(): Group[] { return this.groups.filter(g => g.id !== 'grp-global-pool'); }
   public getGroupById(id: string): Group | undefined { return this.groups.find(g => g.id === id); }
   public addGroup(data: Omit<Group, 'id' | 'createdAt'>): Group {
-    const newGroup: Group = { ...data, id: 'grp-' + Date.now().toString(36), createdAt: new Date().toISOString() };
+    const newGroup: Group = { ...data, id: this.generateId('grp'), createdAt: new Date().toISOString() };
     this.groups.push(newGroup);
     this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
     this.bgUpsert('groups', newGroup);
@@ -142,7 +173,7 @@ class SupabaseService {
   public getStudentById(id: string): Student | undefined { return this.students.find(s => s.id === id); }
   public addStudent(data: Omit<Student, 'id' | 'createdAt'>): Student {
     const nextRoll = data.rollNumber || (this.getStudents(data.groupId).length + 1);
-    const newStudent: Student = { ...data, rollNumber: nextRoll, id: 'stu-' + Date.now().toString(36), createdAt: new Date().toISOString() };
+    const newStudent: Student = { ...data, rollNumber: nextRoll, id: this.generateId('stu'), createdAt: new Date().toISOString() };
     this.students.push(newStudent);
     this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
     this.bgUpsert('students', newStudent);
@@ -175,7 +206,7 @@ class SupabaseService {
   public getOrCreateAttendanceSession(groupId: string, date: string) {
     let session = this.sessions.find(s => s.groupId === groupId && s.date === date);
     if (!session) {
-      session = { id: 'ses-' + Date.now().toString(36), groupId, date, isLocked: false };
+      session = { id: `ses-${groupId}-${date}`, groupId, date, isLocked: false };
       this.sessions.push(session);
       this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions);
       this.bgUpsert('attendance_sessions', session);
@@ -190,7 +221,7 @@ class SupabaseService {
       if (note !== undefined) rec.note = note;
       rec.timestamp = new Date().toISOString();
     } else {
-      rec = { id: 'att-' + Date.now().toString(36), sessionId, studentId, status, note: note || '', timestamp: new Date().toISOString() };
+      rec = { id: `att-${sessionId}-${studentId}`, sessionId, studentId, status, note: note || '', timestamp: new Date().toISOString() };
       this.attendanceRecords.push(rec);
     }
     this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
@@ -201,9 +232,11 @@ class SupabaseService {
     const time = new Date().toISOString();
     studentIds.forEach(stuId => {
       let rec = this.attendanceRecords.find(r => r.sessionId === sessionId && r.studentId === stuId);
-      if (rec) { rec.status = 'Presente'; rec.timestamp = time; }
-      else {
-        rec = { id: 'att-' + Date.now().toString(36), sessionId, studentId: stuId, status: 'Presente', timestamp: time };
+      if (rec) {
+        rec.status = 'Presente';
+        rec.timestamp = time;
+      } else {
+        rec = { id: `att-${sessionId}-${stuId}`, sessionId, studentId: stuId, status: 'Presente', timestamp: time };
         this.attendanceRecords.push(rec);
       }
       this.bgUpsert('attendance_records', rec);
@@ -212,10 +245,12 @@ class SupabaseService {
   }
   public commitAttendanceSave(sessionId: string, isLocked: boolean): AttendanceSession {
     const s = this.sessions.find(x => x.id === sessionId)!;
-    s.isLocked = isLocked;
-    s.completedAt = new Date().toISOString();
-    this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions);
-    this.bgUpsert('attendance_sessions', s);
+    if (s) {
+      s.isLocked = isLocked;
+      s.completedAt = new Date().toISOString();
+      this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions);
+      this.bgUpsert('attendance_sessions', s);
+    }
     return s;
   }
 
@@ -229,13 +264,14 @@ class SupabaseService {
   }
   public getAllGradesForGroup(groupId: string): Grade[] { return this.grades.filter(g => g.groupId === groupId); }
   public setStudentScore(stuId: string, grpId: string, subId: string, perId: string, cat: GradeCategory, title: string, score: number, obs?: string, activityId?: string): Grade {
-    let grd = this.grades.find(g => g.studentId === stuId && g.groupId === grpId && g.subjectId === subId && g.periodId === perId && (activityId ? g.activityId === activityId : g.activityTitle === title));
+    let grd = this.grades.find(g => g.studentId === stuId && g.groupId === grpId && (activityId ? g.activityId === activityId : (g.subjectId === subId && g.periodId === perId && g.activityTitle === title)));
     if (grd) {
       grd.score = score;
       if (obs !== undefined) grd.observation = obs;
       grd.updatedAt = new Date().toISOString();
     } else {
-      grd = { id: 'grd-' + Date.now().toString(36), studentId: stuId, groupId: grpId, subjectId: subId, periodId: perId, category: cat, activityTitle: title, activityId: activityId, score, observation: obs || '', updatedAt: new Date().toISOString() };
+      const uniqueId = activityId ? `grd-${activityId}-${stuId}` : this.generateId('grd');
+      grd = { id: uniqueId, studentId: stuId, groupId: grpId, subjectId: subId, periodId: perId, category: cat, activityTitle: title, activityId: activityId, score, observation: obs || '', updatedAt: new Date().toISOString() };
       this.grades.push(grd);
     }
     this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
@@ -250,7 +286,7 @@ class SupabaseService {
   public getActivities(groupId?: string): Activity[] { return groupId ? this.activities.filter(a => a.groupId === groupId) : [...this.activities]; }
   public getActivityById(id: string): Activity | undefined { return this.activities.find(a => a.id === id); }
   public createActivity(data: Omit<Activity, 'id' | 'createdAt'>): Activity {
-    const act: Activity = { ...data, id: 'act-' + Date.now().toString(36), createdAt: new Date().toISOString() };
+    const act: Activity = { ...data, id: this.generateId('act'), createdAt: new Date().toISOString() };
     this.activities.push(act);
     this.persistLocal(STORAGE_KEYS.ACTIVITIES, this.activities);
     this.bgUpsert('activities', act);
@@ -277,9 +313,24 @@ class SupabaseService {
     const act = this.getActivityById(activityId);
     studentGrades.forEach(sg => {
       let grd = this.grades.find(g => g.activityId === activityId && g.studentId === sg.studentId);
-      if (grd) { grd.score = sg.score; if(sg.observation !== undefined) grd.observation = sg.observation; grd.updatedAt = new Date().toISOString(); }
-      else {
-        grd = { id: 'grd-' + Date.now().toString(36), studentId: sg.studentId, groupId, activityId: activityId, category: act?.type as any || 'Trabajos', activityTitle: act?.title || '', score: sg.score, observation: sg.observation || '', subjectId: '', periodId: '', updatedAt: new Date().toISOString() };
+      if (grd) {
+        grd.score = sg.score;
+        if(sg.observation !== undefined) grd.observation = sg.observation;
+        grd.updatedAt = new Date().toISOString();
+      } else {
+        grd = {
+          id: `grd-${activityId}-${sg.studentId}`,
+          studentId: sg.studentId,
+          groupId,
+          activityId: activityId,
+          category: (act?.type as any) || 'Trabajos',
+          activityTitle: act?.title || '',
+          score: sg.score,
+          observation: sg.observation || '',
+          subjectId: '',
+          periodId: '',
+          updatedAt: new Date().toISOString()
+        };
         this.grades.push(grd);
       }
       this.bgUpsert('grades', grd);
@@ -312,11 +363,23 @@ class SupabaseService {
       callback(session);
     });
   }
-  
+
+  public getSecurityConfig(): SecurityConfig {
+    return { ...this.security };
+  }
+
+  public updatePin(newPin: string): SecurityConfig {
+    this.security = { ...this.security, pin: newPin };
+    this.persistLocal(STORAGE_KEYS.SECURITY, this.security);
+    this.bgUpsert('security_config', { id: 'sec-1', ...this.security });
+    return this.security;
+  }
+
   public getSettings(): UserSettings { return { ...this.settings }; }
   public updateSettings(newSettings: Partial<UserSettings>): UserSettings {
     this.settings = { ...this.settings, ...newSettings };
     this.persistLocal(STORAGE_KEYS.SETTINGS, this.settings);
+    this.bgUpsert('settings', { id: 'default-settings', ...this.settings });
     return this.settings;
   }
 
@@ -327,13 +390,63 @@ class SupabaseService {
       totalGroups: validGroups.length, 
       totalStudents: this.students.length, 
       activeStudents: this.students.filter(s => s.status === 'Active').length, 
-      totalAttendanceRecords: this.attendanceRecords.length, 
+      totalAttendanceRecords: this.sessions.filter(s => s.completedAt || s.isLocked).length || this.sessions.length, 
       totalGrades: this.grades.length 
     };
   }
   public getRawTables() { return { groups: this.groups, students: this.students, sessions: this.sessions, attendanceRecords: this.attendanceRecords, subjects: this.subjects, periods: this.periods, activities: this.activities, grades: this.grades, security: this.security }; }
-  public loadDemoData(): void {}
-  public importDatabaseBackup(data: any): boolean { return false; }
+
+  public loadDemoData(): void {
+    this.groups = [...INITIAL_GROUPS];
+    this.students = [...INITIAL_STUDENTS];
+    this.subjects = [...DEMO_SUBJECTS];
+    this.periods = [...DEMO_PERIODS];
+    this.activities = [];
+    this.grades = [];
+    this.sessions = [];
+    this.attendanceRecords = [];
+    this.ensureGlobalPool();
+    this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
+    this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
+    this.persistLocal(STORAGE_KEYS.SUBJECTS, this.subjects);
+    this.persistLocal(STORAGE_KEYS.PERIODS, this.periods);
+    this.persistLocal(STORAGE_KEYS.ACTIVITIES, this.activities);
+    this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
+    this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions);
+    this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
+  }
+
+  public importDatabaseBackup(data: any): boolean {
+    if (!data || typeof data !== 'object') return false;
+    try {
+      if (Array.isArray(data.groups)) this.groups = data.groups;
+      if (Array.isArray(data.students)) this.students = data.students;
+      if (Array.isArray(data.sessions)) this.sessions = data.sessions;
+      if (Array.isArray(data.attendanceRecords)) this.attendanceRecords = data.attendanceRecords;
+      if (Array.isArray(data.subjects)) this.subjects = data.subjects;
+      if (Array.isArray(data.periods)) this.periods = data.periods;
+      if (Array.isArray(data.activities)) this.activities = data.activities;
+      if (Array.isArray(data.grades)) this.grades = data.grades;
+      if (data.security) this.security = data.security;
+      if (data.settings) this.settings = data.settings;
+
+      this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
+      this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
+      this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions);
+      this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
+      this.persistLocal(STORAGE_KEYS.SUBJECTS, this.subjects);
+      this.persistLocal(STORAGE_KEYS.PERIODS, this.periods);
+      this.persistLocal(STORAGE_KEYS.ACTIVITIES, this.activities);
+      this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
+      this.persistLocal(STORAGE_KEYS.SECURITY, this.security);
+      this.persistLocal(STORAGE_KEYS.SETTINGS, this.settings);
+      this.ensureGlobalPool();
+      return true;
+    } catch (e) {
+      console.error('Error importing backup:', e);
+      return false;
+    }
+  }
 }
 
 export const dbService = new SupabaseService();

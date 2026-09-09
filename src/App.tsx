@@ -245,7 +245,7 @@ export function App() {
 
         <div className="flex items-center gap-3">
           <span className="hidden md:inline text-slate-500">
-            Protección: PIN Activo
+            Sesión Protegida (Supabase Auth)
           </span>
           <span className="border-l border-slate-300 pl-3 text-slate-500">
             Versión 1.0.0
