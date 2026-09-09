@@ -180,36 +180,65 @@ class SupabaseService {
   }
 
   // ==================== STUDENTS ====================
+  public sortStudentsAlphabetically(students: Student[]): Student[] {
+    return [...students].sort((a, b) => {
+      const cmpLast = (a.lastName || '').localeCompare(b.lastName || '', 'es', { sensitivity: 'base' });
+      if (cmpLast !== 0) return cmpLast;
+      const cmpFirst = (a.firstName || '').localeCompare(b.firstName || '', 'es', { sensitivity: 'base' });
+      if (cmpFirst !== 0) return cmpFirst;
+      return a.rollNumber - b.rollNumber;
+    });
+  }
+
+  public reorderStudentsAlphabetically(groupId: string): void {
+    const sorted = this.sortStudentsAlphabetically(this.students.filter(s => s.groupId === groupId));
+    sorted.forEach((s, idx) => {
+      s.rollNumber = idx + 1;
+      this.bgUpsert('students', s);
+    });
+    this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
+  }
+
   public getStudents(groupId?: string): Student[] {
-    if (groupId) return this.students.filter(s => s.groupId === groupId).sort((a,b) => a.rollNumber - b.rollNumber);
-    return [...this.students].sort((a,b) => a.rollNumber - b.rollNumber);
+    if (groupId) return this.sortStudentsAlphabetically(this.students.filter(s => s.groupId === groupId));
+    return this.sortStudentsAlphabetically(this.students);
   }
   public getStudentById(id: string): Student | undefined { return this.students.find(s => s.id === id); }
   public addStudent(data: Omit<Student, 'id' | 'createdAt'>): Student {
     const nextRoll = data.rollNumber || (this.getStudents(data.groupId).length + 1);
     const newStudent: Student = { ...data, rollNumber: nextRoll, id: this.generateId('stu'), createdAt: new Date().toISOString() };
     this.students.push(newStudent);
-    this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
-    this.bgUpsert('students', newStudent);
+    this.reorderStudentsAlphabetically(data.groupId);
     return newStudent;
   }
   public updateStudent(updated: Student): void {
     this.students = this.students.map(s => s.id === updated.id ? updated : s);
-    this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
-    this.bgUpsert('students', updated);
+    this.reorderStudentsAlphabetically(updated.groupId);
   }
   public updateStudentStatus(id: string, status: StudentStatus): void {
     const s = this.getStudentById(id);
-    if(s) { s.status = status; this.persistLocal(STORAGE_KEYS.STUDENTS, this.students); this.bgUpsert('students', s); }
+    if(s) { 
+      s.status = status; 
+      this.persistLocal(STORAGE_KEYS.STUDENTS, this.students); 
+      this.bgUpsert('students', s); 
+    }
   }
   public moveStudentToGroup(studentId: string, newGroupId: string): void {
     const s = this.getStudentById(studentId);
-    if(s) { s.groupId = newGroupId; s.rollNumber = this.getStudents(newGroupId).length + 1; this.persistLocal(STORAGE_KEYS.STUDENTS, this.students); this.bgUpsert('students', s); }
+    if(s) { 
+      const oldGroupId = s.groupId;
+      s.groupId = newGroupId; 
+      this.reorderStudentsAlphabetically(oldGroupId);
+      this.reorderStudentsAlphabetically(newGroupId);
+    }
   }
   public deleteStudent(id: string): void {
+    const target = this.getStudentById(id);
+    const groupId = target?.groupId;
     this.students = this.students.filter(s => s.id !== id);
     this.attendanceRecords = this.attendanceRecords.filter(r => r.studentId !== id);
     this.grades = this.grades.filter(g => g.studentId !== id);
+    if (groupId) this.reorderStudentsAlphabetically(groupId);
     this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
     this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
     this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
@@ -411,8 +440,16 @@ class SupabaseService {
   // ==================== STATS ====================
   public getStats(): DatabaseStats {
     const validGroups = this.getGroups();
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    const completedGroupsToday = validGroups.filter(g => 
+      this.sessions.some(s => s.groupId === g.id && s.date === todayStr && (s.completedAt || s.isLocked || this.attendanceRecords.some(r => r.sessionId === s.id)))
+    ).length;
+
     return { 
       totalGroups: validGroups.length, 
+      completedGroupsToday,
       totalStudents: this.students.length, 
       activeStudents: this.students.filter(s => s.status === 'Active').length, 
       totalAttendanceRecords: this.sessions.filter(s => s.completedAt || s.isLocked).length || this.sessions.length, 

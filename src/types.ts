@@ -99,6 +99,7 @@ export interface UserSettings {
 
 export interface DatabaseStats {
   totalGroups: number;
+  completedGroupsToday: number;
   totalStudents: number;
   activeStudents: number;
   totalAttendanceRecords: number;

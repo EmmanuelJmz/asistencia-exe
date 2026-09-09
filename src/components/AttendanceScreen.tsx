@@ -68,6 +68,8 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
     }
   }, [activeGroup, selectedDate]);
 
+  const [sortBy, setSortBy] = useState<'lastName_asc' | 'lastName_desc' | 'roll_asc' | 'roll_desc' | 'firstName_asc'>('lastName_asc');
+
   const handleGroupChange = (newGroupId: string) => {
     if (isDirty && !window.confirm('Tienes cambios sin guardar en la asistencia actual. ¿Deseas descartarlos y cambiar de grupo?')) {
       return;
@@ -85,7 +87,24 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
   const activeStudents = activeGroup
     ? students
         .filter(s => s.groupId === activeGroup.id && s.status === 'Active')
-        .sort((a, b) => a.rollNumber - b.rollNumber)
+        .sort((a, b) => {
+          if (sortBy === 'lastName_asc') {
+            return (a.lastName || '').localeCompare(b.lastName || '', 'es') || (a.firstName || '').localeCompare(b.firstName || '', 'es');
+          }
+          if (sortBy === 'lastName_desc') {
+            return (b.lastName || '').localeCompare(a.lastName || '', 'es') || (b.firstName || '').localeCompare(a.firstName || '', 'es');
+          }
+          if (sortBy === 'roll_asc') {
+            return a.rollNumber - b.rollNumber;
+          }
+          if (sortBy === 'roll_desc') {
+            return b.rollNumber - a.rollNumber;
+          }
+          if (sortBy === 'firstName_asc') {
+            return (a.firstName || '').localeCompare(b.firstName || '', 'es') || (a.lastName || '').localeCompare(b.lastName || '', 'es');
+          }
+          return 0;
+        })
     : [];
 
   const getRecordForStudent = (studentId: string): AttendanceRecord | undefined => {
@@ -162,7 +181,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
   });
 
   const attendancePercentage = totalInList > 0 
-    ? Math.round(((countPresente + countRetardo) / totalInList) * 100) 
+    ? Math.round(((countPresente + countRetardo + countJustificada) / totalInList) * 100) 
     : 0;
 
   return (
@@ -222,7 +241,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
             <span>No hay grupos registrados aún. Registre su primer grupo para poder iniciar el pase de lista.</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
             <div>
               <label className="font-semibold text-slate-700 block mb-1">Grupo Escolar:</label>
               <select
@@ -246,6 +265,21 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
                 onChange={(e) => handleDateChange(e.target.value)}
                 className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 font-mono focus:outline-none focus:border-blue-600 shadow-inner"
               />
+            </div>
+
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">Ordenar Alumnos:</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 font-medium focus:outline-none focus:border-blue-600 shadow-inner"
+              >
+                <option value="lastName_asc">Apellidos (A - Z)</option>
+                <option value="lastName_desc">Apellidos (Z - A)</option>
+                <option value="roll_asc">N° de Lista (1 - 99)</option>
+                <option value="roll_desc">N° de Lista (99 - 1)</option>
+                <option value="firstName_asc">Nombre (A - Z)</option>
+              </select>
             </div>
 
             <div>

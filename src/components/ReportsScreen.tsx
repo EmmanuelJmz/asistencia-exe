@@ -43,12 +43,11 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
   const groupStudents = activeGroup
     ? students
         .filter(s => s.groupId === activeGroup.id)
-        .sort((a, b) => a.rollNumber - b.rollNumber)
     : [];
 
-  // Total activities for the active group (needed for accurate grade average)
-  const groupActivities = activeGroup ? dbService.getActivities(activeGroup.id) : [];
-  const totalGroupActivities = groupActivities.length;
+  const groupActivities = activeGroup
+    ? raw.activities.filter(a => a.groupId === activeGroup.id)
+    : [];
 
   // Calculate statistics for each student
   const studentReports = groupStudents.map(student => {
@@ -59,27 +58,21 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
     const faltas = studentRecords.filter(r => r.status === 'Falta').length;
     const retardos = studentRecords.filter(r => r.status === 'Retardo').length;
     const justificadas = studentRecords.filter(r => r.status === 'Justificada').length;
-    // Justificadas count as positive attendance (standard academic policy)
-    const attPct = totalSessions > 0
-      ? Math.round(((presentes + retardos + justificadas) / totalSessions) * 100)
-      : 100;
+    const attPct = totalSessions > 0 ? Math.round(((presentes + retardos + justificadas) / totalSessions) * 100) : 100;
 
-    // Grades for this group
+    // Grades for this group 
     const studentGrades = raw.grades.filter(
       g => g.studentId === student.id && g.groupId === activeGroup?.id
     );
 
-    // Average is over ALL activities; unsubmitted activities count as 0
-    let avgGrade: string;
-    if (totalGroupActivities === 0) {
-      avgGrade = 'N/A';
-    } else {
-      const totalScore = groupActivities.reduce((sum, act) => {
-        const grade = studentGrades.find(g => g.activityId === act.id);
-        return sum + (grade ? grade.score : 0);
-      }, 0);
-      avgGrade = (totalScore / totalGroupActivities).toFixed(1);
-    }
+    const studentScores = groupActivities.map(act => {
+      const found = studentGrades.find(g => g.activityId === act.id);
+      return found ? found.score : 0;
+    });
+
+    const avgGrade = groupActivities.length > 0
+      ? (studentScores.reduce((a, b) => a + b, 0) / groupActivities.length).toFixed(1)
+      : (studentGrades.length > 0 ? (studentGrades.reduce((a, b) => a + b.score, 0) / studentGrades.length).toFixed(1) : 'N/A');
 
     return {
       student,

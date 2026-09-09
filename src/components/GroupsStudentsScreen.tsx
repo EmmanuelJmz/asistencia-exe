@@ -73,6 +73,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
   });
 
   const [targetMoveGroupId, setTargetMoveGroupId] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'lastName_asc' | 'lastName_desc' | 'roll_asc' | 'roll_desc' | 'firstName_asc'>('lastName_asc');
 
   const groupStudents = activeGroup
     ? students
@@ -82,7 +83,24 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
           const full = `${s.firstName} ${s.lastName} ${s.rollNumber}`.toLowerCase();
           return full.includes(searchQuery.toLowerCase());
         })
-        .sort((a, b) => a.rollNumber - b.rollNumber)
+        .sort((a, b) => {
+          if (sortBy === 'lastName_asc') {
+            return (a.lastName || '').localeCompare(b.lastName || '', 'es') || (a.firstName || '').localeCompare(b.firstName || '', 'es');
+          }
+          if (sortBy === 'lastName_desc') {
+            return (b.lastName || '').localeCompare(a.lastName || '', 'es') || (b.firstName || '').localeCompare(a.firstName || '', 'es');
+          }
+          if (sortBy === 'roll_asc') {
+            return a.rollNumber - b.rollNumber;
+          }
+          if (sortBy === 'roll_desc') {
+            return b.rollNumber - a.rollNumber;
+          }
+          if (sortBy === 'firstName_asc') {
+            return (a.firstName || '').localeCompare(b.firstName || '', 'es') || (a.lastName || '').localeCompare(b.lastName || '', 'es');
+          }
+          return 0;
+        })
     : [];
 
   // ================= Handlers =================
@@ -478,15 +496,28 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
 
               {/* Search input & View Toggle */}
               <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Filtrar por apellidos, nombre o N° lista..."
-                    className="w-full pl-8 pr-2.5 py-1.5 rounded bg-white border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 shadow-inner"
-                  />
+                <div className="flex items-center gap-2 flex-1 max-w-md">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Filtrar por apellidos, nombre o N°..."
+                      className="w-full pl-8 pr-2.5 py-1.5 rounded bg-white border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 shadow-inner"
+                    />
+                  </div>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="px-2.5 py-1.5 rounded bg-white border border-slate-300 text-xs text-slate-800 font-medium focus:outline-none focus:border-blue-600 shadow-inner shrink-0"
+                  >
+                    <option value="lastName_asc">Apellidos (A - Z)</option>
+                    <option value="lastName_desc">Apellidos (Z - A)</option>
+                    <option value="roll_asc">N° Lista (1 - 99)</option>
+                    <option value="roll_desc">N° Lista (99 - 1)</option>
+                    <option value="firstName_asc">Nombre (A - Z)</option>
+                  </select>
                 </div>
                 
                 <div className="flex items-center gap-3">

@@ -87,7 +87,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
   const activeStudents = activeGroup
     ? students
         .filter(s => s.groupId === activeGroup.id && s.status === 'Active')
-        .sort((a, b) => a.rollNumber - b.rollNumber)
+        .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '', 'es') || (a.firstName || '').localeCompare(b.firstName || '', 'es') || a.rollNumber - b.rollNumber)
     : [];
 
   // Activities for this group
@@ -309,18 +309,9 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
               const groupStudents = students.filter(s => s.groupId === group.id && s.status === 'Active');
               const activities = dbService.getActivities(group.id);
               const groupGrades = dbService.getAllGradesForGroup(group.id);
-
-              // Average divides by (students × activities); missing submissions = 0
-              const avgScore = activities.length > 0 && groupStudents.length > 0
-                ? (() => {
-                    const total = groupStudents.reduce((acc, stu) => {
-                      return acc + activities.reduce((aAcc, act) => {
-                        const found = groupGrades.find(g => g.studentId === stu.id && g.activityId === act.id);
-                        return aAcc + (found ? found.score : 0);
-                      }, 0);
-                    }, 0);
-                    return (total / (groupStudents.length * activities.length)).toFixed(1);
-                  })()
+              const totalExpectedGrades = groupStudents.length * activities.length;
+              const avgScore = totalExpectedGrades > 0
+                ? (groupGrades.reduce((acc, g) => acc + g.score, 0) / totalExpectedGrades).toFixed(1)
                 : 'Sin notas';
 
               return (
@@ -666,9 +657,8 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filteredActivities.map(act => {
                 const actGrades = dbService.getActivityGrades(act.id);
-                const gradedCount = actGrades.length;
-                const actAvg = gradedCount > 0
-                  ? (actGrades.reduce((acc, g) => acc + g.score, 0) / gradedCount).toFixed(1)
+                const actAvg = activeStudents.length > 0
+                  ? (actGrades.reduce((acc, g) => acc + g.score, 0) / activeStudents.length).toFixed(1)
                   : 'Pendiente';
 
                 return (
@@ -802,15 +792,11 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
                   activeStudents.map(student => {
                     const studentScores = groupActivities.map(act => {
                       const found = dbService.getActivityGrades(act.id).find(g => g.studentId === student.id);
-                      return found ? found.score : null;
+                      return found ? found.score : 0;
                     });
 
-                    // Average = sum of all activity scores / total activities (nulls count as 0)
                     const finalAvg = groupActivities.length > 0
-                      ? (groupActivities.reduce((acc, act) => {
-                          const found = dbService.getActivityGrades(act.id).find(g => g.studentId === student.id);
-                          return acc + (found ? found.score : 0);
-                        }, 0) / groupActivities.length).toFixed(1)
+                      ? (studentScores.reduce((a, b) => a + b, 0) / groupActivities.length).toFixed(1)
                       : 'N/A';
 
                     return (
