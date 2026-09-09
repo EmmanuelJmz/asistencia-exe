@@ -70,7 +70,21 @@ class SupabaseService {
         supabase.from('security_config').select('*').limit(1)
       ]);
 
-      if (grp.data && grp.data.length > 0) { this.groups = grp.data; this.persistLocal(STORAGE_KEYS.GROUPS, this.groups); }
+      if (grp.data && grp.data.length > 0) {
+        this.groups = grp.data;
+        this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
+
+        const settingsRec = grp.data.find((g: any) => g.id === 'grp-app-settings' || g.grade === 'SETTINGS');
+        if (settingsRec) {
+          try {
+            const parsed = JSON.parse(settingsRec.name);
+            if (parsed && typeof parsed === 'object') {
+              this.settings = { ...this.settings, ...parsed };
+              this.persistLocal(STORAGE_KEYS.SETTINGS, this.settings);
+            }
+          } catch (e) {}
+        }
+      }
       if (stu.data && stu.data.length > 0) { this.students = stu.data; this.persistLocal(STORAGE_KEYS.STUDENTS, this.students); }
       if (ses.data && ses.data.length > 0) { this.sessions = ses.data; this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions); }
       if (att.data && att.data.length > 0) {
@@ -139,7 +153,7 @@ class SupabaseService {
   }
 
   // ==================== GROUPS ====================
-  public getGroups(): Group[] { return this.groups.filter(g => g.id !== 'grp-global-pool'); }
+  public getGroups(): Group[] { return this.groups.filter(g => g.id !== 'grp-global-pool' && g.id !== 'grp-app-settings' && g.grade !== 'SETTINGS'); }
   public getGroupById(id: string): Group | undefined { return this.groups.find(g => g.id === id); }
   public addGroup(data: Omit<Group, 'id' | 'createdAt'>): Group {
     const newGroup: Group = { ...data, id: this.generateId('grp'), createdAt: new Date().toISOString() };
@@ -379,7 +393,18 @@ class SupabaseService {
   public updateSettings(newSettings: Partial<UserSettings>): UserSettings {
     this.settings = { ...this.settings, ...newSettings };
     this.persistLocal(STORAGE_KEYS.SETTINGS, this.settings);
-    this.bgUpsert('settings', { id: 'default-settings', ...this.settings });
+
+    const settingsRecord: Group = {
+      id: 'grp-app-settings',
+      name: JSON.stringify(this.settings),
+      grade: 'SETTINGS',
+      section: 'CONFIG',
+      shift: 'Matutino',
+      schoolYear: '2026-2027',
+      colorHex: '#000000',
+      createdAt: new Date().toISOString()
+    };
+    this.bgUpsert('groups', settingsRecord);
     return this.settings;
   }
 

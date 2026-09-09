@@ -8,14 +8,9 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
 });
 
 async function runTest() {
-  console.log('Testing insert...');
-  const res = await supabase.from('groups').upsert({ id: 'grp-test1', name: 'Test Group', grade: '1', section: 'A' }).select();
-  console.log('Insert Error:', res.error);
-  console.log('Insert Data:', res.data);
-  
-  console.log('Testing select...');
-  const res2 = await supabase.from('groups').select('*');
-  console.log('Select Error:', res2.error);
-  console.log('Select Data:', res2.data);
+  console.log('Testing select groups...');
+  const res = await supabase.from('groups').select('*');
+  console.log('Select Error:', res.error);
+  console.log('Select Data count:', res.data ? res.data.length : 0);
 }
 runTest();

@@ -15,6 +15,12 @@ import {
 import { Group, Student, ActiveScreen, DatabaseStats } from '../types';
 import { dbService } from '../db/databaseService';
 
+// Local ISO date (YYYY-MM-DD) in device's timezone, avoids UTC offset bugs
+const getTodayLocal = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 interface DashboardScreenProps {
   groups: Group[];
   students: Student[];
@@ -43,6 +49,17 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const dateString = now.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const totalActivities = dbService.getActivities().length;
   const settings = dbService.getSettings();
+
+  // Groups with at least one attendance session recorded TODAY
+  const today = getTodayLocal();
+  const rawTables = dbService.getRawTables();
+  const todaySessionGroupIds = new Set(
+    rawTables.sessions
+      .filter(s => s.date === today)
+      .map(s => s.groupId)
+  );
+  const groupsWithAttendanceToday = todaySessionGroupIds.size;
+  const totalGroups = groups.length;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
@@ -80,22 +97,58 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
       {/* KPI Metrics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Grupos Activos', value: stats.totalGroups, icon: Users, color: 'bg-blue-50 text-blue-600 border-blue-200' },
-          { label: 'Alumnos', value: stats.totalStudents, icon: GraduationCap, color: 'bg-indigo-50 text-indigo-600 border-indigo-200' },
-          { label: 'Pases de Lista', value: stats.totalAttendanceRecords, icon: CalendarCheck, color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-          { label: 'Actividades', value: totalActivities, icon: Activity, color: 'bg-amber-50 text-amber-600 border-amber-200' },
-        ].map((kpi, idx) => (
-          <div key={idx} className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className={`p-3 rounded-lg border ${kpi.color}`}>
-              <kpi.icon className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">{kpi.label}</p>
-              <p className="text-2xl font-bold text-slate-900 font-mono">{kpi.value}</p>
-            </div>
+        {/* Grupos Activos */}
+        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="p-3 rounded-lg border bg-blue-50 text-blue-600 border-blue-200">
+            <Users className="w-5 h-5" />
           </div>
-        ))}
+          <div>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Grupos Activos</p>
+            <p className="text-2xl font-bold text-slate-900 font-mono">{stats.totalGroups}</p>
+          </div>
+        </div>
+
+        {/* Alumnos */}
+        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="p-3 rounded-lg border bg-indigo-50 text-indigo-600 border-indigo-200">
+            <GraduationCap className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Alumnos</p>
+            <p className="text-2xl font-bold text-slate-900 font-mono">{stats.totalStudents}</p>
+          </div>
+        </div>
+
+        {/* Pases de Lista Hoy (Dynamic KPI) */}
+        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="relative p-3 rounded-lg border bg-emerald-50 text-emerald-600 border-emerald-200">
+            <CalendarCheck className="w-5 h-5" />
+            {totalGroups > 0 && groupsWithAttendanceToday === totalGroups && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" title="Todos los grupos completados hoy" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Lista Hoy</p>
+            <p className="text-2xl font-bold font-mono leading-none">
+              <span className={groupsWithAttendanceToday === totalGroups && totalGroups > 0 ? 'text-emerald-600' : 'text-slate-900'}>
+                {groupsWithAttendanceToday}
+              </span>
+              <span className="text-base text-slate-400 font-normal">/{totalGroups}</span>
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">grupos completados</p>
+          </div>
+        </div>
+
+        {/* Actividades */}
+        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="p-3 rounded-lg border bg-amber-50 text-amber-600 border-amber-200">
+            <Activity className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Actividades</p>
+            <p className="text-2xl font-bold text-slate-900 font-mono">{totalActivities}</p>
+          </div>
+        </div>
       </div>
 
       {/* Main Content Area */}

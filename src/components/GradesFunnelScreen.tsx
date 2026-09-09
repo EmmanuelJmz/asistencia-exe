@@ -309,9 +309,18 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
               const groupStudents = students.filter(s => s.groupId === group.id && s.status === 'Active');
               const activities = dbService.getActivities(group.id);
               const groupGrades = dbService.getAllGradesForGroup(group.id);
-              
-              const avgScore = groupGrades.length > 0
-                ? (groupGrades.reduce((acc, g) => acc + g.score, 0) / groupGrades.length).toFixed(1)
+
+              // Average divides by (students × activities); missing submissions = 0
+              const avgScore = activities.length > 0 && groupStudents.length > 0
+                ? (() => {
+                    const total = groupStudents.reduce((acc, stu) => {
+                      return acc + activities.reduce((aAcc, act) => {
+                        const found = groupGrades.find(g => g.studentId === stu.id && g.activityId === act.id);
+                        return aAcc + (found ? found.score : 0);
+                      }, 0);
+                    }, 0);
+                    return (total / (groupStudents.length * activities.length)).toFixed(1);
+                  })()
                 : 'Sin notas';
 
               return (
@@ -796,9 +805,12 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
                       return found ? found.score : null;
                     });
 
-                    const validScores = studentScores.filter((s): s is number => s !== null);
-                    const finalAvg = validScores.length > 0
-                      ? (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1)
+                    // Average = sum of all activity scores / total activities (nulls count as 0)
+                    const finalAvg = groupActivities.length > 0
+                      ? (groupActivities.reduce((acc, act) => {
+                          const found = dbService.getActivityGrades(act.id).find(g => g.studentId === student.id);
+                          return acc + (found ? found.score : 0);
+                        }, 0) / groupActivities.length).toFixed(1)
                       : 'N/A';
 
                     return (
