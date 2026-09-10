@@ -11,6 +11,9 @@ import { GradesFunnelScreen } from './components/GradesFunnelScreen';
 import { ReportsScreen } from './components/ReportsScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { SqliteInspectorModal } from './components/SqliteInspectorModal';
+import { WhatsNewModal } from './components/WhatsNewModal';
+
+const CURRENT_VERSION = 'v1.2.0';
 
 export function App() {
   const [session, setSession] = useState<any>(null);
@@ -22,6 +25,9 @@ export function App() {
     return localStorage.getItem('selectedGroupId') || null;
   });
   const [isSqliteModalOpen, setIsSqliteModalOpen] = useState<boolean>(false);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState<boolean>(() => {
+    return localStorage.getItem('edugestion_last_version') !== CURRENT_VERSION;
+  });
 
   // Core Data States from local SQLite database repository
   const [groups, setGroups] = useState<Group[]>([]);
@@ -247,9 +253,12 @@ export function App() {
           <span className="hidden md:inline text-slate-500">
             Sesión Protegida (Supabase Auth)
           </span>
-          <span className="border-l border-slate-300 pl-3 text-slate-500">
-            Versión 1.0.0
-          </span>
+          <button 
+            onClick={() => setIsWhatsNewOpen(true)}
+            className="border-l border-slate-300 pl-3 text-blue-700 font-semibold hover:underline cursor-pointer flex items-center gap-1"
+          >
+            Versión {CURRENT_VERSION} (Novedades)
+          </button>
         </div>
       </footer>
 
@@ -257,6 +266,16 @@ export function App() {
       {isSqliteModalOpen && (
         <SqliteInspectorModal onClose={() => setIsSqliteModalOpen(false)} />
       )}
+
+      {/* WhatsNew Release Notes Modal */}
+      <WhatsNewModal
+        isOpen={isWhatsNewOpen}
+        onClose={() => {
+          localStorage.setItem('edugestion_last_version', CURRENT_VERSION);
+          setIsWhatsNewOpen(false);
+        }}
+        version={CURRENT_VERSION}
+      />
     </div>
   );
 }

@@ -314,7 +314,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
               const totalExpectedGrades = groupStudents.length * activities.length;
               const avgScore = totalExpectedGrades > 0
                 ? (groupGrades.reduce((acc, g) => acc + g.score, 0) / totalExpectedGrades).toFixed(1)
-                : 'Sin notas';
+                : 'Sin calificaciones';
 
               return (
                 <div
@@ -405,7 +405,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
           {/* Quick Score Fill Preset Row */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200 text-xs">
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-slate-500 font-medium">Asignar nota rápida a todos:</span>
+              <span className="text-[11px] text-slate-500 font-medium">Asignar calificación rápida a todos:</span>
               {['10.0', '9.0', '8.0', '7.0', '5.0'].map(scorePreset => (
                 <button
                   key={scorePreset}
@@ -442,9 +442,9 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
             <span className="text-slate-300">|</span>
             <span>Reprobados (&lt; 6.0): <strong className="font-mono text-red-600 font-bold">{failingCount}</strong></span>
             <span className="text-slate-300">|</span>
-            <span>Nota Máx: <strong className="font-mono text-slate-800 font-bold">{highest}</strong></span>
+            <span>Calificación Máx: <strong className="font-mono text-slate-800 font-bold">{highest}</strong></span>
             <span className="text-slate-300">|</span>
-            <span>Nota Mín: <strong className="font-mono text-slate-800 font-bold">{lowest}</strong></span>
+            <span>Calificación Mín: <strong className="font-mono text-slate-800 font-bold">{lowest}</strong></span>
           </div>
           <span className="text-[11px] text-slate-500">Escala oficial: 0.0 - {activeActivity.maxScore || 10.0}</span>
         </div>
@@ -736,7 +736,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold transition-colors shadow-xs"
                       >
                         <CheckSquare className="w-3.5 h-3.5" />
-                        <span>{gradedCount > 0 ? 'Modificar Notas' : 'Calificar Alumnos'}</span>
+                        <span>{gradedCount > 0 ? 'Modificar Calificaciones' : 'Calificar Alumnos'}</span>
                       </button>
                     </div>
                   </div>

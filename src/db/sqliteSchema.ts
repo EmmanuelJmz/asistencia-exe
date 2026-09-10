@@ -122,6 +122,16 @@ CREATE TABLE IF NOT EXISTS Security_Config (
   failedAttempts INTEGER NOT NULL DEFAULT 0,
   lockedUntilTimestamp INTEGER NOT NULL DEFAULT 0
 );
+
+-- 10. Tabla Teacher_Notes (Notas del Profesor)
+CREATE TABLE IF NOT EXISTS Teacher_Notes (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  dueDate TEXT,
+  completed INTEGER NOT NULL DEFAULT 0,
+  groupId TEXT,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 export const INITIAL_SUBJECTS: any[] = [];

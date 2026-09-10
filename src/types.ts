@@ -97,6 +97,15 @@ export interface UserSettings {
   autoLockMinutes: number;
 }
 
+export interface TeacherNote {
+  id: string;
+  title: string;
+  dueDate?: string; // YYYY-MM-DD
+  completed: boolean;
+  groupId?: string;
+  createdAt: string;
+}
+
 export interface DatabaseStats {
   totalGroups: number;
   completedGroupsToday: number;

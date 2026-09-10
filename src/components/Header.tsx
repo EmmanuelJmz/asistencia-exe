@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="bg-slate-800 text-slate-100 border-b border-slate-700 shadow-sm select-none sticky top-0 z-40">
+    <header className="bg-slate-800 text-slate-100 border-b border-slate-700 shadow-sm select-none sticky top-0 z-40 print:hidden">
       {/* Top Desktop Window Titlebar */}
       <div className="bg-slate-900 px-3 py-1.5 border-b border-slate-950/60 flex items-center justify-between text-xs">
         <div className="flex items-center gap-2.5">

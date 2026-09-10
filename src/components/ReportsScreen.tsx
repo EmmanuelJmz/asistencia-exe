@@ -6,7 +6,9 @@ import {
   School, 
   CheckCircle2,
   CheckSquare,
-  GraduationCap
+  GraduationCap,
+  AlertCircle,
+  Clock
 } from 'lucide-react';
 import { 
   Group, 
@@ -50,6 +52,20 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
   const groupActivities = activeGroup
     ? raw.activities.filter(a => a.groupId === activeGroup.id)
     : [];
+
+  // Attendance session info for selected date
+  const selectedDateSession = activeGroup && reportScope === 'date'
+    ? raw.sessions.find(s => s.groupId === activeGroup.id && s.date === selectedReportDate)
+    : null;
+
+  const selectedDateRecords = selectedDateSession
+    ? raw.attendanceRecords.filter(r => r.sessionId === selectedDateSession.id)
+    : [];
+
+  const dateStats = selectedDateRecords.reduce((acc, r) => {
+    acc[r.status] = (acc[r.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   // Calculate statistics for each student
   const studentReports = groupStudents.map(student => {
@@ -278,6 +294,39 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Date Attendance Session Status Indicator */}
+      {reportScope === 'date' && activeGroup && (
+        <div className="p-3 rounded bg-slate-50 border border-slate-300 text-xs text-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 print:hidden shadow-xs">
+          <div className="flex items-center gap-2">
+            {selectedDateSession ? (
+              selectedDateSession.isLocked ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+              )
+            ) : (
+              <AlertCircle className="w-4 h-4 text-slate-400 shrink-0" />
+            )}
+            <div>
+              {selectedDateSession ? (
+                <span>
+                  <strong className="text-slate-900">Pase de lista en {activeGroup.name} el {selectedReportDate}:</strong>{' '}
+                  <span className="text-emerald-700 font-semibold">{dateStats['Presente'] || 0} Presentes</span>,{' '}
+                  <span className="text-red-700 font-semibold">{dateStats['Falta'] || 0} Faltas</span>,{' '}
+                  <span className="text-amber-700 font-semibold">{dateStats['Retardo'] || 0} Retardos</span>,{' '}
+                  <span className="text-indigo-700 font-semibold">{dateStats['Justificada'] || 0} Justificadas</span>
+                  {selectedDateSession.isLocked ? ' (Completado y Cerrado)' : ' (En Borrador)'}
+                </span>
+              ) : (
+                <span className="text-slate-600">
+                  <strong className="text-slate-800">Sin registro de lista:</strong> No se ha tomado lista en {activeGroup.name} el día <strong>{selectedReportDate}</strong>.
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Export Feedback Toast */}
       {exportFeedback && (

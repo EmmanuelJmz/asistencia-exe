@@ -1,4 +1,4 @@
-import { Group, Student, AttendanceSession, AttendanceRecord, AttendanceStatus, StudentStatus, Subject, Period, Grade, GradeCategory, Activity, ActivityType, SecurityConfig, DatabaseStats, UserSettings } from '../types';
+import { Group, Student, AttendanceSession, AttendanceRecord, AttendanceStatus, StudentStatus, Subject, Period, Grade, GradeCategory, Activity, ActivityType, SecurityConfig, DatabaseStats, UserSettings, TeacherNote } from '../types';
 import { supabase } from '../supabaseClient';
 import { INITIAL_GROUPS, INITIAL_STUDENTS, DEMO_SUBJECTS, DEMO_PERIODS } from './sqliteSchema';
 
@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   ACTIVITIES: 'edugestion_prod_activities_v2',
   SECURITY: 'edugestion_prod_security_v2',
   SETTINGS: 'edugestion_prod_settings_v2',
+  NOTES: 'edugestion_prod_notes_v2',
 };
 
 class SupabaseService {
@@ -25,6 +26,7 @@ class SupabaseService {
   private periods: Period[] = [];
   private activities: Activity[] = [];
   private grades: Grade[] = [];
+  private teacherNotes: TeacherNote[] = [];
   private security: SecurityConfig = { id: 'sec-1', pin: '1234', failedAttempts: 0, lockedUntilTimestamp: 0 };
   private settings: UserSettings = { teacherName: 'Profesor Titular', schoolName: 'Escuela Secundaria', theme: 'light', fontSize: 'normal', autoLockMinutes: 10 };
 
@@ -46,6 +48,7 @@ class SupabaseService {
       const p = localStorage.getItem(STORAGE_KEYS.PERIODS); if(p) this.periods = JSON.parse(p);
       const ac = localStorage.getItem(STORAGE_KEYS.ACTIVITIES); if(ac) this.activities = JSON.parse(ac);
       const gr = localStorage.getItem(STORAGE_KEYS.GRADES); if(gr) this.grades = JSON.parse(gr);
+      const n = localStorage.getItem(STORAGE_KEYS.NOTES); if(n) this.teacherNotes = JSON.parse(n);
       const sec = localStorage.getItem(STORAGE_KEYS.SECURITY); if(sec) this.security = JSON.parse(sec);
       const set = localStorage.getItem(STORAGE_KEYS.SETTINGS); if(set) this.settings = JSON.parse(set);
     } catch(e) {}
@@ -57,7 +60,7 @@ class SupabaseService {
 
   public async loadFromCloud() {
     try {
-      const [grp, stu, ses, att, sub, per, act, grd, set, sec] = await Promise.all([
+      const [grp, stu, ses, att, sub, per, act, grd, set, sec, nts] = await Promise.all([
         supabase.from('groups').select('*'),
         supabase.from('students').select('*'),
         supabase.from('attendance_sessions').select('*'),
@@ -67,7 +70,8 @@ class SupabaseService {
         supabase.from('activities').select('*'),
         supabase.from('grades').select('*'),
         supabase.from('settings').select('*').limit(1),
-        supabase.from('security_config').select('*').limit(1)
+        supabase.from('security_config').select('*').limit(1),
+        supabase.from('teacher_notes').select('*')
       ]);
 
       if (grp.data && grp.data.length > 0) {
@@ -122,6 +126,17 @@ class SupabaseService {
       if (sec.data && sec.data.length > 0) {
         this.security = { ...this.security, ...sec.data[0] };
         this.persistLocal(STORAGE_KEYS.SECURITY, this.security);
+      }
+      if (nts.data && nts.data.length > 0) {
+        this.teacherNotes = nts.data.map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          dueDate: n.duedate || n.dueDate,
+          completed: Boolean(n.completed),
+          groupId: n.groupid || n.groupId,
+          createdAt: n.createdat || n.createdAt || new Date().toISOString(),
+        }));
+        this.persistLocal(STORAGE_KEYS.NOTES, this.teacherNotes);
       }
       
       this.ensureGlobalPool();
@@ -530,6 +545,56 @@ class SupabaseService {
       console.error('Error importing backup:', e);
       return false;
     }
+  }
+
+  // ==================== TEACHER NOTES ====================
+  public getTeacherNotes(): TeacherNote[] {
+    return [...this.teacherNotes].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  public addTeacherNote(data: { title: string; dueDate?: string; groupId?: string }): TeacherNote {
+    const note: TeacherNote = {
+      id: this.generateId('note'),
+      title: data.title,
+      dueDate: data.dueDate,
+      groupId: data.groupId,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    };
+    this.teacherNotes.unshift(note);
+    this.persistLocal(STORAGE_KEYS.NOTES, this.teacherNotes);
+    this.syncTeacherNoteToCloud(note);
+    return note;
+  }
+
+  public toggleTeacherNote(id: string): TeacherNote | undefined {
+    const note = this.teacherNotes.find(n => n.id === id);
+    if (note) {
+      note.completed = !note.completed;
+      this.persistLocal(STORAGE_KEYS.NOTES, this.teacherNotes);
+      this.syncTeacherNoteToCloud(note);
+    }
+    return note;
+  }
+
+  private syncTeacherNoteToCloud(note: TeacherNote) {
+    this.bgUpsert('teacher_notes', {
+      id: note.id,
+      title: note.title,
+      duedate: note.dueDate || null,
+      dueDate: note.dueDate || null,
+      completed: note.completed,
+      groupid: note.groupId || null,
+      groupId: note.groupId || null,
+      createdat: note.createdAt,
+      createdAt: note.createdAt,
+    });
+  }
+
+  public deleteTeacherNote(id: string): void {
+    this.teacherNotes = this.teacherNotes.filter(n => n.id !== id);
+    this.persistLocal(STORAGE_KEYS.NOTES, this.teacherNotes);
+    this.bgDelete('teacher_notes', id);
   }
 }
 
