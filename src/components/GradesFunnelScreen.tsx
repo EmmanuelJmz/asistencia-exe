@@ -659,6 +659,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filteredActivities.map(act => {
                 const actGrades = dbService.getActivityGrades(act.id);
+                const gradedCount = actGrades.length;
                 const actAvg = activeStudents.length > 0
                   ? (actGrades.reduce((acc, g) => acc + g.score, 0) / activeStudents.length).toFixed(1)
                   : 'Pendiente';
