@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   CheckSquare,
   GraduationCap,
+  ClipboardCheck,
   AlertCircle,
   Clock
 } from 'lucide-react';
@@ -37,7 +38,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
   onSelectGroup,
 }) => {
   const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
-  const [currentTab, setCurrentTab] = useState<'attendance' | 'grades'>('attendance');
+  const [currentTab, setCurrentTab] = useState<'attendance' | 'grades' | 'evaluation'>('attendance');
   const [reportScope, setReportScope] = useState<'all' | 'date'>('all');
   const [selectedReportDate, setSelectedReportDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
@@ -89,6 +90,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
     );
 
     const activityScoresMap: Record<string, number> = {};
+    const deliveredActivities = groupActivities.filter(act => studentGrades.some(g => g.activityId === act.id)).length;
     const studentScores = groupActivities.map(act => {
       const found = studentGrades.find(g => g.activityId === act.id);
       const val = found ? found.score : 0;
@@ -110,7 +112,10 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
       attPct,
       studentGrades,
       activityScoresMap,
+      deliveredActivities,
+      pendingActivities: Math.max(0, groupActivities.length - deliveredActivities),
       avgGrade,
+      evaluationStatus: avgGrade === 'N/A' ? 'Sin evaluación' : parseFloat(avgGrade) >= 6 ? 'Aprobado' : 'Reprobado',
     };
   });
 
@@ -150,7 +155,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
         ].join(',');
         csvContent += row + '\n';
       });
-    } else {
+    } else if (currentTab === 'grades') {
       // Detailed Grades Export: Includes columns for EVERY activity + final average
       const actHeaders = groupActivities.map(a => `"${a.title.replace(/"/g, '""')} (${a.dueDate})"`);
       const headerRow = ['N_Lista', 'Apellidos', 'Nombres', 'Estatus', ...actHeaders, 'Promedio_Final'].join(',');
@@ -168,9 +173,25 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
         ].join(',');
         csvContent += row + '\n';
       });
+    } else {
+      const actHeaders = groupActivities.map(a => `"${a.title.replace(/"/g, '""')} (${a.dueDate})"`);
+      csvContent += ['N_Lista', 'Apellidos', 'Nombres', 'Actividades_Entregadas', 'Actividades_No_Entregadas', ...actHeaders, 'Promedio_Final', 'Evaluacion'].join(',') + '\n';
+      studentReports.forEach(r => {
+        const actVals = groupActivities.map(a => r.activityScoresMap[a.id] ?? 0);
+        csvContent += [
+          r.student.rollNumber,
+          `"${r.student.lastName.replace(/"/g, '""')}"`,
+          `"${r.student.firstName.replace(/"/g, '""')}"`,
+          r.deliveredActivities,
+          r.pendingActivities,
+          ...actVals,
+          r.avgGrade,
+          r.evaluationStatus
+        ].join(',') + '\n';
+      });
     }
 
-    const prefix = currentTab === 'attendance' ? 'Asistencia' : 'Calificaciones';
+    const prefix = currentTab === 'attendance' ? 'Asistencia' : currentTab === 'grades' ? 'Calificaciones' : 'Evaluacion_Alumnos';
     const scopeLabel = reportScope === 'date' ? `_Fecha_${selectedReportDate}` : '_General';
     const defaultFilename = `Reporte_${prefix}_${activeGroup.name.replace(/\s+/g, '_')}${scopeLabel}.csv`;
 
@@ -290,6 +311,17 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                 <GraduationCap className="w-3.5 h-3.5" />
                 Calificaciones
               </button>
+              <button
+                onClick={() => setCurrentTab('evaluation')}
+                className={`flex-1 flex items-center justify-center gap-2 py-1 rounded text-xs font-semibold transition-colors ${
+                  currentTab === 'evaluation'
+                    ? 'bg-white shadow-xs text-slate-900 border-slate-200'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <ClipboardCheck className="w-3.5 h-3.5" />
+                Evaluar alumnos
+              </button>
             </div>
           </div>
         </div>
@@ -352,7 +384,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
           <div className="text-left md:text-right space-y-0.5 text-xs text-slate-700">
             <p className="font-bold text-sm text-slate-900">
-              {currentTab === 'attendance' ? 'Reporte Oficial de Asistencias' : 'Sábana Oficial de Calificaciones'}
+              {currentTab === 'attendance' ? 'Reporte Oficial de Asistencias' : currentTab === 'grades' ? 'Sábana Oficial de Calificaciones' : 'Evaluación Final de Alumnos'}
             </p>
             <p><strong>Grupo:</strong> {activeGroup?.name || 'N/A'}</p>
           </div>
@@ -364,7 +396,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
             <span className="text-[11px] text-slate-500 font-medium block">Total Alumnos</span>
             <p className="text-base font-bold text-slate-900 font-mono">{groupStudents.length}</p>
           </div>
-          {currentTab === 'grades' ? (
+          {currentTab === 'grades' || currentTab === 'evaluation' ? (
             <>
               <div className="bg-slate-50 border border-slate-300 rounded p-2.5 text-center">
                 <span className="text-[11px] text-slate-500 font-medium block">Promedio Calificaciones</span>
@@ -403,15 +435,27 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                     <th className="py-2 px-2 text-center text-blue-700 border-r border-slate-200">Just.</th>
                     <th className="py-2 px-2.5 text-center border-r border-slate-200">% Asist.</th>
                   </>
-                ) : (
+                ) : currentTab === 'grades' ? (
                   <th className="py-2 px-2.5 text-center font-bold text-slate-900">Promedio</th>
+                ) : (
+                  <>
+                    {groupActivities.map(activity => (
+                      <th key={activity.id} className="py-2 px-2 text-center min-w-20 border-r border-slate-200" title={activity.title}>
+                        {activity.title}
+                      </th>
+                    ))}
+                    <th className="py-2 px-2 text-center text-emerald-800 border-r border-slate-200">Entregadas</th>
+                    <th className="py-2 px-2 text-center text-amber-700 border-r border-slate-200">No entregadas</th>
+                    <th className="py-2 px-2.5 text-center font-bold text-slate-900 border-r border-slate-200">Promedio final</th>
+                    <th className="py-2 px-2.5 text-center font-bold text-slate-900">Evaluación</th>
+                  </>
                 )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {studentReports.length === 0 ? (
                 <tr>
-                  <td colSpan={currentTab === 'attendance' ? 8 : 4} className="py-8 text-center text-slate-500">
+                  <td colSpan={currentTab === 'attendance' ? 8 : currentTab === 'grades' ? 4 : groupActivities.length + 7} className="py-8 text-center text-slate-500">
                     No hay alumnos registrados para generar el reporte.
                   </td>
                 </tr>
@@ -455,7 +499,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             {r.attPct}%
                           </td>
                         </>
-                      ) : (
+                      ) : currentTab === 'grades' ? (
                         <td className="py-1.5 px-2.5 text-center">
                           {r.avgGrade === 'N/A' ? (
                             <span className="text-slate-400 font-mono text-xs">S/C</span>
@@ -469,6 +513,22 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             </span>
                           )}
                         </td>
+                      ) : (
+                        <>
+                          {groupActivities.map(activity => (
+                            <td key={activity.id} className="py-1.5 px-2 text-center font-mono border-r border-slate-200">
+                              {r.activityScoresMap[activity.id] ?? 0}
+                            </td>
+                          ))}
+                          <td className="py-1.5 px-2 text-center font-mono font-semibold text-emerald-700 border-r border-slate-200">{r.deliveredActivities}</td>
+                          <td className="py-1.5 px-2 text-center font-mono font-semibold text-amber-700 border-r border-slate-200">{r.pendingActivities}</td>
+                          <td className="py-1.5 px-2.5 text-center border-r border-slate-200">
+                            <span className={`font-mono font-bold px-2 py-0.5 rounded text-xs ${r.avgGrade === 'N/A' ? 'text-slate-400' : isPassing ? 'bg-emerald-50 text-emerald-800 border border-emerald-300' : 'bg-red-50 text-red-700 border border-red-300'}`}>{r.avgGrade === 'N/A' ? 'S/C' : r.avgGrade}</span>
+                          </td>
+                          <td className="py-1.5 px-2.5 text-center">
+                            <span className={`font-semibold text-[10px] ${isPassing ? 'text-emerald-700' : 'text-red-700'}`}>{r.evaluationStatus}</span>
+                          </td>
+                        </>
                       )}
                     </tr>
                   );

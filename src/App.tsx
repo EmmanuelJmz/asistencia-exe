@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ActiveScreen, Group, Student, Subject, Period, UserSettings, DatabaseStats } from './types';
+import { ActiveScreen, Group, Student, Subject, Period, UserSettings, DatabaseStats, Activity, Grade } from './types';
+import { EvaluateStudentsScreen } from './components/EvaluateStudentsScreen';
 import { dbService } from './db/databaseService';
 import { LoginScreen } from './components/LoginScreen';
 import { Header } from './components/Header';
@@ -13,7 +14,7 @@ import { SettingsScreen } from './components/SettingsScreen';
 import { SqliteInspectorModal } from './components/SqliteInspectorModal';
 import { WhatsNewModal } from './components/WhatsNewModal';
 
-const CURRENT_VERSION = 'v1.2.0';
+const CURRENT_VERSION = 'v1.3.0';
 
 export function App() {
   const [session, setSession] = useState<any>(null);

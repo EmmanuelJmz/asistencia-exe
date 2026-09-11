@@ -57,6 +57,22 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
   const [tempNoteText, setTempNoteText] = useState('');
 
   const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
+  const rawAttendance = dbService.getRawTables();
+
+  const getGroupAttendanceStatus = (group: Group) => {
+    const groupStudents = students.filter(s => s.groupId === group.id && s.status === 'Active');
+    const groupSession = rawAttendance.sessions.find(s => s.groupId === group.id && s.date === selectedDate);
+    const recordCount = groupSession
+      ? rawAttendance.attendanceRecords.filter(r => r.sessionId === groupSession.id).length
+      : 0;
+
+    if (groupStudents.length === 0) return { label: 'Sin alumnos', tone: 'text-slate-400' };
+    if (group.id === activeGroup?.id && groupSession?.id === session?.id && isDirty) return { label: 'Cambios sin guardar', tone: 'text-amber-700' };
+    if (recordCount >= groupStudents.length) return { label: 'Lista completa', tone: 'text-emerald-700' };
+    if (groupSession?.isLocked && recordCount > 0) return { label: `${recordCount}/${groupStudents.length} incompleta`, tone: 'text-red-700' };
+    if (recordCount > 0) return { label: `${recordCount}/${groupStudents.length} registrados`, tone: 'text-amber-700' };
+    return { label: 'Pendiente', tone: 'text-slate-500' };
+  };
 
   // Load or create attendance session whenever group or date changes
   useEffect(() => {
@@ -111,9 +127,19 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
     return records.find(r => r.studentId === studentId);
   };
 
+  const allStudentsPresent = activeStudents.length > 0 && activeStudents.every(student => getRecordForStudent(student.id)?.status === 'Presente');
+
   const handleSetStatus = (studentId: string, status: AttendanceStatus) => {
     if (!session || session.isLocked) return;
-    const updated = dbService.setStudentAttendanceStatus(session.id, studentId, status);
+    const existing = getRecordForStudent(studentId);
+    if (status === 'Presente' && existing?.status === 'Presente') {
+      setRecords(prev => prev.filter(record => record.studentId !== studentId));
+      setIsDirty(true);
+      return;
+    }
+    const updated: AttendanceRecord = existing
+      ? { ...existing, status, timestamp: new Date().toISOString() }
+      : { id: `att-${session.id}-${studentId}`, sessionId: session.id, studentId, status, note: '', timestamp: new Date().toISOString() };
     setIsDirty(true);
     setRecords(prev => {
       const idx = prev.findIndex(r => r.studentId === studentId);
@@ -128,15 +154,35 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
 
   const handleMarkAllPresent = () => {
     if (!session || session.isLocked) return;
-    const studentIds = activeStudents.map(s => s.id);
-    dbService.markAllPresent(session.id, studentIds);
-    const reloaded = dbService.getOrCreateAttendanceSession(session.groupId, session.date);
-    setRecords(reloaded.records);
+    const time = new Date().toISOString();
+    if (allStudentsPresent) {
+      setRecords(prev => prev.filter(record => !activeStudents.some(student => student.id === record.studentId && record.status === 'Presente')));
+      setIsDirty(true);
+      return;
+    }
+    setRecords(prev => activeStudents.map(student => {
+      const existing = prev.find(record => record.studentId === student.id);
+      return existing
+        ? { ...existing, status: 'Presente', timestamp: time }
+        : { id: `att-${session.id}-${student.id}`, sessionId: session.id, studentId: student.id, status: 'Presente', note: '', timestamp: time };
+    }));
+    setIsDirty(true);
+  };
+
+  const handleClearAttendance = () => {
+    if (!session || records.length === 0) return;
+    if (!window.confirm(`¿Desea limpiar toda la asistencia de ${activeGroup?.name || 'este grupo'} para el ${selectedDate}? Esta acción se aplicará al guardar.`)) return;
+    if (session.isLocked) {
+      const reopenedSession = dbService.commitAttendanceSave(session.id, false);
+      setSession(reopenedSession);
+    }
+    setRecords([]);
     setIsDirty(true);
   };
 
   const handleSaveAndLock = (lock: boolean) => {
     if (!session) return;
+    if (isDirty) dbService.saveAttendanceRecords(session.id, records);
     const updatedSession = dbService.commitAttendanceSave(session.id, lock);
     setSession(updatedSession);
     setIsSavedBanner(true);
@@ -151,7 +197,9 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
     if (!session || session.isLocked) return;
     const existing = getRecordForStudent(studentId);
     const currentStatus: AttendanceStatus = existing ? existing.status : 'Presente';
-    const updated = dbService.setStudentAttendanceStatus(session.id, studentId, currentStatus, tempNoteText);
+    const updated: AttendanceRecord = existing
+      ? { ...existing, status: currentStatus, note: tempNoteText, timestamp: new Date().toISOString() }
+      : { id: `att-${session.id}-${studentId}`, sessionId: session.id, studentId, status: currentStatus, note: tempNoteText, timestamp: new Date().toISOString() };
     setRecords(prev => {
       const idx = prev.findIndex(r => r.studentId === studentId);
       if (idx >= 0) {
@@ -161,6 +209,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
       }
       return [...prev, updated];
     });
+    setIsDirty(true);
     setActiveNoteStudentId(null);
     onDataChanged();
   };
@@ -206,13 +255,23 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {records.length > 0 && (
+              <button
+                onClick={handleClearAttendance}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-50 hover:bg-red-100 text-red-800 border border-red-300 text-xs font-semibold transition-colors"
+                title="Quitar todos los registros de esta lista"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                <span>Limpiar lista</span>
+              </button>
+            )}
             <button
               onClick={handleMarkAllPresent}
               disabled={session?.isLocked || activeStudents.length === 0}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-800 disabled:opacity-40 text-white text-xs font-semibold shadow-xs transition-colors border border-emerald-800"
             >
               <CheckCheck className="w-3.5 h-3.5" />
-              <span>Marcar Todos Presentes</span>
+              <span>{allStudentsPresent ? 'Quitar Todos Presentes' : 'Marcar Todos Presentes'}</span>
             </button>
 
             {session?.isLocked ? (
@@ -253,10 +312,15 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
               >
                 {groups.map(g => (
                   <option key={g.id} value={g.id}>
-                    {g.name} — Turno {g.shift}
+                    {g.name} — {getGroupAttendanceStatus(g).label}
                   </option>
                 ))}
               </select>
+              <div className="mt-1 text-[10px] text-slate-500">
+                Estado del día seleccionado: <span className={`font-semibold ${activeGroup ? getGroupAttendanceStatus(activeGroup).tone : ''}`}>
+                  {activeGroup ? getGroupAttendanceStatus(activeGroup).label : 'Sin grupo'}
+                </span>
+              </div>
             </div>
 
             <div>

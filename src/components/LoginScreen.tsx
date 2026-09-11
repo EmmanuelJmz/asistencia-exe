@@ -7,6 +7,7 @@ export const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +20,7 @@ export const LoginScreen: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await dbService.login(username, password);
+      await dbService.login(username, password, rememberMe);
       // App.tsx auth listener will automatically handle the redirect
     } catch (err: any) {
       setError('Usuario o contraseña incorrectos.');
@@ -80,6 +81,17 @@ export const LoginScreen: React.FC = () => {
               />
             </div>
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              disabled={isLoading}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-blue-600 focus:ring-blue-500"
+            />
+            <span>Recordarme en este equipo</span>
+          </label>
 
           {error && (
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium text-center">

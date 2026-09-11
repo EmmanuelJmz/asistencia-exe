@@ -60,6 +60,7 @@ class SupabaseService {
 
   public async loadFromCloud() {
     try {
+      const localTeacherNotes = [...this.teacherNotes];
       const [grp, stu, ses, att, sub, per, act, grd, set, sec, nts] = await Promise.all([
         supabase.from('groups').select('*'),
         supabase.from('students').select('*'),
@@ -127,8 +128,10 @@ class SupabaseService {
         this.security = { ...this.security, ...sec.data[0] };
         this.persistLocal(STORAGE_KEYS.SECURITY, this.security);
       }
-      if (nts.data && nts.data.length > 0) {
-        this.teacherNotes = nts.data.map((n: any) => ({
+      if (nts.error) {
+        console.error('Error loading teacher_notes from Supabase:', nts.error);
+      } else if (nts.data) {
+        const cloudTeacherNotes = nts.data.map((n: any) => ({
           id: n.id,
           title: n.title,
           dueDate: n.duedate || n.dueDate,
@@ -136,6 +139,23 @@ class SupabaseService {
           groupId: n.groupid || n.groupId,
           createdAt: n.createdat || n.createdAt || new Date().toISOString(),
         }));
+
+        const cloudNoteIds = new Set(cloudTeacherNotes.map(note => note.id));
+        const localOnlyNotes = localTeacherNotes.filter(note => !cloudNoteIds.has(note.id));
+
+        if (localOnlyNotes.length > 0) {
+          const { error: migrationError } = await supabase
+            .from('teacher_notes')
+            .upsert(localOnlyNotes.map(note => this.teacherNoteToRow(note)));
+
+          if (migrationError) {
+            console.error('Error migrando notas locales a Supabase:', migrationError);
+          } else {
+            console.info(`Se migraron ${localOnlyNotes.length} nota(s) local(es) a Supabase.`);
+          }
+        }
+
+        this.teacherNotes = [...cloudTeacherNotes, ...localOnlyNotes];
         this.persistLocal(STORAGE_KEYS.NOTES, this.teacherNotes);
       }
       
@@ -162,6 +182,23 @@ class SupabaseService {
       this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
       this.bgUpsert('groups', globalGrp);
     }
+  }
+
+  // ------------------- SYNC HELPERS -------------------
+  private syncGroup(data: any) { this.bgUpsert('groups', data); }
+  private syncStudent(data: any) { this.bgUpsert('students', data); }
+  private syncActivity(data: any) { this.bgUpsert('activities', data); }
+  private syncGrade(data: any) { this.bgUpsert('grades', data); }
+
+  private teacherNoteToRow(note: TeacherNote) {
+    return {
+      id: note.id,
+      title: note.title,
+      duedate: note.dueDate || null,
+      completed: note.completed,
+      groupid: note.groupId || null,
+      createdat: note.createdAt,
+    };
   }
 
   private async bgUpsert(table: string, data: any) {
@@ -309,6 +346,24 @@ class SupabaseService {
     });
     this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
   }
+  public saveAttendanceRecords(sessionId: string, records: AttendanceRecord[]): void {
+    const savedRecords = this.attendanceRecords.filter(record => record.sessionId === sessionId);
+    const retainedIds = new Set(records.map(record => record.id));
+    savedRecords.filter(record => !retainedIds.has(record.id)).forEach(record => {
+      this.bgDelete('attendance_records', record.id);
+    });
+    this.attendanceRecords = this.attendanceRecords.filter(record => record.sessionId !== sessionId || retainedIds.has(record.id));
+    records.forEach(record => {
+      const existing = this.attendanceRecords.find(r => r.id === record.id);
+      if (existing) {
+        Object.assign(existing, record);
+      } else {
+        this.attendanceRecords.push(record);
+      }
+      this.bgUpsert('attendance_records', record);
+    });
+    this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
+  }
   public commitAttendanceSave(sessionId: string, isLocked: boolean): AttendanceSession {
     const s = this.sessions.find(x => x.id === sessionId)!;
     if (s) {
@@ -405,13 +460,18 @@ class SupabaseService {
   }
 
   // ==================== SECURITY & AUTHENTICATION ====================
-  public async login(username: string, password: string) {
+  public async login(username: string, password: string, rememberMe = true) {
     const email = `${username.toLowerCase().trim()}@admin.local`;
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) throw new Error(error.message);
+    if (!rememberMe) {
+      Object.keys(localStorage)
+        .filter(key => key.startsWith('sb-') && key.endsWith('-auth-token'))
+        .forEach(key => localStorage.removeItem(key));
+    }
     return data;
   }
 
@@ -480,9 +540,17 @@ class SupabaseService {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     
-    const completedGroupsToday = validGroups.filter(g => 
-      this.sessions.some(s => s.groupId === g.id && s.date === todayStr && (s.completedAt || s.isLocked || this.attendanceRecords.some(r => r.sessionId === s.id)))
-    ).length;
+    const completedGroupsToday = validGroups.filter(g => {
+      const activeStudentCount = this.students.filter(student => student.groupId === g.id && student.status === 'Active').length;
+      const todaySession = this.sessions.find(session => session.groupId === g.id && session.date === todayStr);
+      const recordedStudentCount = todaySession
+        ? new Set(this.attendanceRecords
+          .filter(record => record.sessionId === todaySession.id)
+          .map(record => record.studentId)).size
+        : 0;
+
+      return activeStudentCount > 0 && recordedStudentCount >= activeStudentCount;
+    }).length;
 
     return { 
       totalGroups: validGroups.length, 
@@ -563,39 +631,37 @@ class SupabaseService {
     };
     this.teacherNotes.unshift(note);
     this.persistLocal(STORAGE_KEYS.NOTES, this.teacherNotes);
-    this.syncTeacherNoteToCloud(note);
+    // Sync to cloud using new helper
+    this.syncTeacherNote(note);
     return note;
   }
+
+  private syncTeacherNote(note: TeacherNote) {
+    this.bgUpsert('teacher_notes', this.teacherNoteToRow(note));
+  }
+
 
   public toggleTeacherNote(id: string): TeacherNote | undefined {
     const note = this.teacherNotes.find(n => n.id === id);
     if (note) {
       note.completed = !note.completed;
       this.persistLocal(STORAGE_KEYS.NOTES, this.teacherNotes);
-      this.syncTeacherNoteToCloud(note);
+      // Sync change
+      this.syncTeacherNote(note);
     }
     return note;
   }
 
-  private syncTeacherNoteToCloud(note: TeacherNote) {
-    this.bgUpsert('teacher_notes', {
-      id: note.id,
-      title: note.title,
-      duedate: note.dueDate || null,
-      dueDate: note.dueDate || null,
-      completed: note.completed,
-      groupid: note.groupId || null,
-      groupId: note.groupId || null,
-      createdat: note.createdAt,
-      createdAt: note.createdAt,
-    });
-  }
+
+
 
   public deleteTeacherNote(id: string): void {
     this.teacherNotes = this.teacherNotes.filter(n => n.id !== id);
     this.persistLocal(STORAGE_KEYS.NOTES, this.teacherNotes);
     this.bgDelete('teacher_notes', id);
   }
+
+
 }
 
 export const dbService = new SupabaseService();

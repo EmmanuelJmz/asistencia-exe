@@ -10,26 +10,30 @@ interface WhatsNewModalProps {
 export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   isOpen,
   onClose,
-  version = 'v1.2.0'
+  version = 'v1.3.0'
 }) => {
   if (!isOpen) return null;
 
   const updates = [
     {
-      title: 'Impresión limpia de PDF',
-      description: 'Se removió la barra de navegación de las impresiones y exportaciones de sábanas y reportes.'
+      title: 'Evaluación final por alumno',
+      description: 'Nuevo modo en Reportes y Sábanas con actividades, entregas, pendientes, promedio final y estado de aprobado o reprobado.'
     },
     {
-      title: 'Resumen de asistencia por fecha en reportes',
-      description: 'Al seleccionar una fecha en la sección de reportes, se muestra el estado del pase de lista del grupo.'
+      title: 'Asistencia con estados claros',
+      description: 'El selector de grupos muestra Pendiente, incompleta o Lista completa según los registros reales de la fecha.'
     },
     {
-      title: 'Notas y pendientes del profesor',
-      description: 'Nuevo espacio en el panel de inicio para registrar notas rápidas, fechas límite y pendientes.'
+      title: 'Borrador y recuperación de asistencia',
+      description: 'Los cambios no se guardan hasta confirmar. Se pueden quitar presentes individualmente o limpiar toda la lista.'
     },
     {
-      title: 'Alertas de entregas y calificaciones',
-      description: 'Notificaciones automáticas en el inicio sobre actividades próximas a vencer y pendientes por calificar.'
+      title: 'Notas del profesor sincronizadas',
+      description: 'Las notas locales se migran automáticamente a Supabase; las notas largas se abren en un detalle y conservan su estado.'
+    },
+    {
+      title: 'Alertas y estadísticas corregidas',
+      description: 'Los conteos de calificaciones y el indicador Lista de Hoy ahora reflejan registros completos reales.'
     }
   ];
 

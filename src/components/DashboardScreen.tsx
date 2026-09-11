@@ -46,6 +46,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteDate, setNewNoteDate] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [selectedNote, setSelectedNote] = useState<TeacherNote | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -291,9 +292,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       </div>
                       <p className="text-[11px] text-slate-600">
                         Grupo: <strong>{item.group?.name || 'Desconocido'}</strong> • Entrega: <strong>{item.activity.dueDate}</strong>
-                        {item.pendingCount > 0 && (
-                          <span> • <strong className="text-red-700">{item.pendingCount} de {item.totalStudents} sin calificar</strong></span>
-                        )}
+                        <span> • <strong className="text-slate-800">{item.gradedCount} de {item.totalStudents} calificados</strong> • <strong className="text-red-700">{item.pendingCount} pendientes</strong></span>
                       </p>
                     </div>
 
@@ -370,18 +369,30 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   return (
                     <div key={note.id} className="pt-2 first:pt-0 flex items-start justify-between gap-2 text-xs">
                       <div className="flex items-start gap-2 flex-1 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={note.completed}
+                        <select
+                          value={note.completed ? 'completed' : 'pending'}
                           onChange={() => handleToggleNote(note.id)}
-                          className="mt-0.5 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
-                        />
+                          aria-label={`Estado de la nota: ${note.title}`}
+                          className={`shrink-0 px-1.5 py-1 rounded border text-[10px] font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer ${
+                            note.completed
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-red-50 text-red-700 border-red-200'
+                          }`}
+                        >
+                          <option value="pending">Pendiente</option>
+                          <option value="completed">Realizada</option>
+                        </select>
                         <div className="space-y-0.5 flex-1 min-w-0">
-                          <p className={`font-medium leading-snug break-words ${
-                            note.completed ? 'line-through text-slate-400' : 'text-slate-800'
-                          }`}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedNote(note)}
+                            title="Abrir nota completa"
+                            className={`block w-full text-left font-medium leading-snug truncate hover:underline ${
+                              note.completed ? 'line-through text-slate-400' : 'text-slate-800'
+                            }`}
+                          >
                             {note.title}
-                          </p>
+                          </button>
                           {note.dueDate && (
                             <div className="flex items-center gap-1 text-[10px]">
                               <Calendar className="w-3 h-3 text-slate-400" />
@@ -409,6 +420,40 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               </div>
             )}
           </div>
+
+          {selectedNote && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Detalle de nota"
+              onClick={() => setSelectedNote(null)}
+            >
+              <div
+                className="w-full max-w-md rounded-xl bg-white border border-slate-200 shadow-2xl p-5 space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <h3 className="text-base font-bold text-slate-900">Nota del profesor</h3>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedNote(null)}
+                    className="text-slate-400 hover:text-slate-700 text-xl leading-none"
+                    aria-label="Cerrar nota"
+                  >
+                    ×
+                  </button>
+                </div>
+                <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">{selectedNote.title}</p>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  <span className={`px-2 py-1 rounded border font-semibold ${selectedNote.completed ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                    {selectedNote.completed ? 'Realizada' : 'Pendiente'}
+                  </span>
+                  {selectedNote.dueDate && <span>Fecha: {selectedNote.dueDate}</span>}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Quick Navigation Links */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">

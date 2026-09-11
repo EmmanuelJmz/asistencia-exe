@@ -2,7 +2,8 @@ import React from 'react';
 import { 
   School, 
   Users, 
-  CheckSquare, 
+  CheckSquare,
+  CheckCircle2, 
   GraduationCap, 
   FileSpreadsheet, 
   Settings, 
