@@ -93,6 +93,7 @@ export interface UserSettings {
   teacherName: string;
   schoolName: string;
   theme: 'dark' | 'light' | 'system';
+  accentColor: string;
   fontSize: 'small' | 'normal' | 'large';
   autoLockMinutes: number;
 }

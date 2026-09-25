@@ -2,6 +2,14 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
+  <script>
+    try {
+      const saved = JSON.parse(localStorage.getItem('edugestion_prod_settings_v2') || '{}');
+      if (saved.theme === 'dark') document.documentElement.classList.add('dark');
+      document.documentElement.dataset.designMode =
+        localStorage.getItem('edugestion_design_mode') === 'new' ? 'new' : 'classic';
+    } catch (_) {}
+  </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sistema de Pase de Lista y Control de Calificaciones</title>
     <meta name="description" content="Aplicación institucional de escritorio para control de grupos, matrícula de alumnos, registro de asistencia diaria y sábanas de calificaciones." />
@@ -18,5 +26,3 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
-

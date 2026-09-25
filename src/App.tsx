@@ -18,6 +18,9 @@ const CURRENT_VERSION = 'v1.3.0';
 
 export function App() {
   const [session, setSession] = useState<any>(null);
+  const [designMode, setDesignMode] = useState<'classic' | 'new'>(() =>
+    localStorage.getItem('edugestion_design_mode') === 'new' ? 'new' : 'classic'
+  );
   const [isInitializingAuth, setIsInitializingAuth] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<ActiveScreen>(() => {
     return (localStorage.getItem('currentScreen') as ActiveScreen) || 'dashboard';
@@ -90,6 +93,24 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    document.documentElement.dataset.designMode = designMode;
+    localStorage.setItem('edugestion_design_mode', designMode);
+  }, [designMode]);
+
+  useEffect(() => {
+    const palettes: Record<string, [string, string]> = {
+      '#FF441F': ['#FF441F', '#FF6B4A'], '#7C3AED': ['#7C3AED', '#A78BFA'],
+      '#2563EB': ['#2563EB', '#60A5FA'], '#DC2626': ['#DC2626', '#F87171'],
+      '#059669': ['#059669', '#34D399'], '#D97706': ['#D97706', '#FBBF24'],
+      '#DB2777': ['#DB2777', '#F472B6'], '#0891B2': ['#0891B2', '#22D3EE'],
+    };
+    const [main, light] = palettes[settings.accentColor] || palettes['#FF441F'];
+    document.documentElement.style.setProperty('--accent-color', main);
+    document.documentElement.style.setProperty('--accent-light', light);
+    document.documentElement.style.setProperty('--accent-hover', main);
+  }, [settings.accentColor]);
+
+  useEffect(() => {
     if (settings.theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -125,7 +146,7 @@ export function App() {
   };
 
   if (isInitializingAuth) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900"><div className="text-xl font-bold text-slate-500 animate-pulse">Conectando...</div></div>;
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#121212]"><div className="text-xl font-bold text-[#FF441F] animate-pulse">Conectando...</div></div>;
   }
 
   if (!session) {
@@ -133,11 +154,11 @@ export function App() {
   }
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900"><div className="flex items-center gap-3"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div><div className="text-xl font-bold text-slate-600">Sincronizando con la nube...</div></div></div>;
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#121212]"><div className="flex flex-col items-center gap-3"><div className="w-10 h-10 border-4 border-[#FF441F] border-t-transparent rounded-full animate-spin"></div><div className="text-lg font-bold text-gray-800 dark:text-gray-200">Sincronizando con la nube...</div></div></div>;
   }
 
   return (
-    <div className={`min-h-screen ${settings.theme === 'light' ? 'bg-slate-100 text-slate-800' : 'bg-[#0F172A] text-slate-100'} flex flex-col selection:bg-blue-600 selection:text-white`}>
+    <div className="min-h-screen flex flex-col selection:bg-[#FF6B4A] selection:text-white">
       {/* Top Application Header */}
       <Header
         currentScreen={currentScreen}
@@ -145,6 +166,8 @@ export function App() {
         onLockApp={handleLockApp}
         settings={settings}
         stats={stats}
+        designMode={designMode}
+        onToggleDesign={() => setDesignMode(mode => mode === 'classic' ? 'new' : 'classic')}
         onToggleTheme={() => {
           const newTheme = settings.theme === 'dark' ? 'light' : 'dark';
           const updated = dbService.updateSettings({ ...settings, theme: newTheme });
@@ -153,7 +176,7 @@ export function App() {
       />
 
       {/* Main Container View */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 print:max-w-none print:p-0">
         {currentScreen === 'dashboard' && (
           <DashboardScreen
             groups={groups}
@@ -235,30 +258,30 @@ export function App() {
         )}
       </main>
 
-      {/* Classic Desktop Statusbar */}
-      <footer className="bg-slate-200 border-t border-slate-300 px-3 py-1 text-[11px] text-slate-600 flex flex-wrap items-center justify-between select-none print:hidden">
+      {/* Clean Statusbar */}
+      <footer className="bg-white dark:bg-[#1E1E1E] border-t border-gray-200 dark:border-[#333333] px-4 py-3 text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center justify-between select-none print:hidden shadow-sm">
         <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5 font-medium text-slate-700">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span className="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-200">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
             Sistema Listo
           </span>
-          <span className="border-l border-slate-300 pl-4 font-medium text-slate-700">
+          <span className="border-l border-gray-200 dark:border-[#333333] pl-4 font-semibold text-gray-700 dark:text-gray-200">
             {settings.schoolName}
           </span>
-          <span className="hidden sm:inline border-l border-slate-300 pl-4">
-            Grupos: <strong className="text-slate-800 font-mono">{groups.length}</strong> | Alumnos Inscritos: <strong className="text-slate-800 font-mono">{students.length}</strong>
+          <span className="hidden sm:inline border-l border-gray-200 dark:border-[#333333] pl-4">
+            Grupos: <strong className="text-gray-800 dark:text-white font-bold">{groups.length}</strong> | Alumnos Inscritos: <strong className="text-gray-800 dark:text-white font-bold">{students.length}</strong>
           </span>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="hidden md:inline text-slate-500">
-            Sesión Protegida (Supabase Auth)
+          <span className="hidden md:inline">
+            Sesión Protegida
           </span>
           <button 
             onClick={() => setIsWhatsNewOpen(true)}
-            className="border-l border-slate-300 pl-3 text-blue-700 font-semibold hover:underline cursor-pointer flex items-center gap-1"
+            className="border-l border-gray-200 dark:border-[#333333] pl-3 text-[#FF441F] font-bold hover:text-[#E03514] transition-colors cursor-pointer flex items-center gap-1"
           >
-            Versión {CURRENT_VERSION} (Novedades)
+            Versión {CURRENT_VERSION}
           </button>
         </div>
       </footer>

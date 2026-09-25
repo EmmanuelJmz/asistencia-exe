@@ -13,8 +13,6 @@ import {
   CalendarCheck,
   StickyNote,
   Calendar,
-  AlertCircle,
-  CheckCircle2,
   Trash2,
   Plus,
   Bell
@@ -109,7 +107,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       {/* Hero Welcome Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-900 text-white p-6 md:p-8 shadow-xl">
+      <div className="relative overflow-hidden rounded-[2rem] bg-[#FF441F] text-white p-6 md:p-10 shadow-lg shadow-[#FF441F]/20">
         <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/4 opacity-10 pointer-events-none">
           <Users className="w-64 h-64" />
         </div>
@@ -133,8 +131,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               <Clock className="w-5 h-5 opacity-80" />
               {timeString}
             </div>
-            <div className="text-blue-200 text-sm capitalize">
-              {dateString}
+            <div className="text-[#FFD1C7] text-sm flex items-center gap-2">
+              <CalendarCheck className="w-4 h-4 opacity-80" />
+              <span className="capitalize">{dateString}</span>
             </div>
           </div>
         </div>
@@ -143,18 +142,18 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       {/* KPI Metrics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Grupos Activos', value: stats.totalGroups, icon: Users, color: 'bg-blue-50 text-blue-600 border-blue-200' },
-          { label: 'Alumnos', value: stats.totalStudents, icon: GraduationCap, color: 'bg-indigo-50 text-indigo-600 border-indigo-200' },
-          { label: 'Lista de Hoy', value: `${stats.completedGroupsToday} / ${stats.totalGroups}`, icon: CalendarCheck, color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-          { label: 'Actividades', value: allActivities.length, icon: Activity, color: 'bg-amber-50 text-amber-600 border-amber-200' },
+          { label: 'Grupos Activos', value: stats.totalGroups, icon: Users, color: 'bg-gray-100 text-gray-800 dark:bg-[#333333] dark:text-gray-100' },
+          { label: 'Alumnos', value: stats.totalStudents, icon: GraduationCap, color: 'bg-[#FF441F]/10 text-[#FF441F] dark:bg-[#FF441F]/20' },
+          { label: 'Lista de Hoy', value: `${stats.completedGroupsToday} / ${stats.totalGroups}`, icon: CalendarCheck, color: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' },
+          { label: 'Actividades', value: allActivities.length, icon: Activity, color: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
         ].map((kpi, idx) => (
-          <div key={idx} className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className={`p-3 rounded-lg border ${kpi.color}`}>
-              <kpi.icon className="w-5 h-5" />
+          <div key={idx} className="rappi-card p-5 flex items-center gap-4 group hover:-translate-y-1 transition-transform duration-300">
+            <div className={`p-3.5 rounded-2xl ${kpi.color} transition-colors`}>
+              <kpi.icon className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">{kpi.label}</p>
-              <p className="text-2xl font-bold text-slate-900 font-mono">{kpi.value}</p>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-0.5">{kpi.label}</p>
+              <p className="text-3xl font-extrabold text-gray-900 dark:text-white leading-none">{kpi.value}</p>
             </div>
           </div>
         ))}
@@ -169,32 +168,32 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           {/* Groups List */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                <TrendingUp className="w-6 h-6 text-[#FF441F]" />
                 Mis Grupos Escolares
               </h2>
               <button 
                 onClick={() => onNavigate('groups_students')}
-                className="text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                className="text-sm font-bold text-[#FF441F] hover:text-[#E03514] flex items-center gap-1 transition-colors"
               >
                 Ver todos <ArrowRight className="w-4 h-4" />
               </button>
             </div>
 
             {groups.length === 0 ? (
-              <div className="bg-white rounded-xl border border-slate-200 border-dashed p-10 flex flex-col items-center justify-center text-center space-y-4 shadow-sm">
-                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
-                  <Users className="w-8 h-8" />
+              <div className="rappi-card border-dashed border-2 p-10 flex flex-col items-center justify-center text-center space-y-4">
+                <div className="w-20 h-20 bg-gray-50 dark:bg-[#2A2A2A] rounded-full flex items-center justify-center text-gray-400 dark:text-gray-500">
+                  <Users className="w-10 h-10" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Aún no hay grupos</h3>
-                  <p className="text-slate-500 text-sm max-w-sm mt-1">Crea tu primer grupo para comenzar a pasar lista, registrar actividades y generar reportes oficiales.</p>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Aún no hay grupos</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm max-w-sm mt-2">Crea tu primer grupo para comenzar a pasar lista, registrar actividades y generar reportes oficiales.</p>
                 </div>
                 <button
                   onClick={() => onNavigate('groups_students')}
-                  className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5"
+                  className="mt-4 inline-flex items-center gap-2 px-6 py-3 rappi-btn-primary"
                 >
-                  <PlusCircle className="w-4 h-4" />
+                  <PlusCircle className="w-5 h-5" />
                   Crear Nuevo Grupo
                 </button>
               </div>
@@ -205,45 +204,45 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   const activeCount = groupStudents.filter(s => s.status === 'Active').length;
                   
                   return (
-                    <div key={group.id} className="group bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between">
+                    <div key={group.id} className="rappi-card p-6 flex flex-col justify-between hover:shadow-md hover:border-[#FF441F]/30 transition-all">
                       <div>
                         <div className="flex items-start justify-between mb-2">
-                          <h3 className="text-xl font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
+                          <h3 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">
                             {group.name}
                           </h3>
-                          <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded-md bg-slate-100 text-slate-600">
+                          <span className="text-[10px] uppercase tracking-widest font-black px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-[#2A2A2A] text-gray-500 dark:text-gray-400">
                             {group.shift}
                           </span>
                         </div>
-                        <p className="text-xs font-medium text-slate-500 mb-4">
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">
                           Grado {group.grade} • Sec "{group.section}"
                         </p>
                         
-                        <div className="flex items-center gap-4 text-sm text-slate-600 mb-6">
-                          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-100">
-                            <Users className="w-4 h-4 text-slate-400" />
-                            <span className="font-bold text-slate-800">{activeCount}</span>
+                        <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300 mb-8">
+                          <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#2A2A2A] px-3 py-1.5 rounded-xl">
+                            <Users className="w-4 h-4 text-gray-400" />
+                            <span className="font-bold">{activeCount}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-100">
-                            <Activity className="w-4 h-4 text-slate-400" />
-                            <span className="font-bold text-slate-800">{dbService.getActivities(group.id).length}</span>
+                          <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#2A2A2A] px-3 py-1.5 rounded-xl">
+                            <Activity className="w-4 h-4 text-gray-400" />
+                            <span className="font-bold">{dbService.getActivities(group.id).length}</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-3 mt-auto">
                         <button
                           onClick={() => { onSelectGroupForAttendance(group.id); onNavigate('attendance'); }}
-                          className="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs transition-colors border border-emerald-200"
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-[#2A2A2A] dark:hover:bg-[#333333] text-gray-700 dark:text-gray-300 font-bold text-xs transition-colors"
                         >
-                          <CheckSquare className="w-3.5 h-3.5" />
+                          <CheckSquare className="w-4 h-4" />
                           Pase de Lista
                         </button>
                         <button
                           onClick={() => { onSelectGroupForGrades(group.id); onNavigate('grades'); }}
-                          className="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs transition-colors border border-indigo-200"
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-[#2A2A2A] dark:hover:bg-[#333333] text-gray-700 dark:text-gray-300 font-bold text-xs transition-colors"
                         >
-                          <GraduationCap className="w-3.5 h-3.5" />
+                          <GraduationCap className="w-4 h-4" />
                           Calificar
                         </button>
                       </div>
@@ -255,11 +254,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </div>
 
           {/* Activity Alerts Widget: Tareas por vencer y calificaciones pendientes */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
+          <div className="rappi-card p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Bell className="w-4 h-4 text-amber-600" />
-                Alertas de Actividades y Calificaciones
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Bell className="w-5 h-5 text-amber-500" />
+                Alertas de Actividades
               </h3>
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
                 {activityAlerts.length} Pendientes
@@ -268,7 +267,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
             {activityAlerts.length === 0 ? (
               <div className="py-6 text-center text-xs text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-                ✨ ¡Todo al día! No hay actividades próximas a vencer ni calificaciones pendientes de captura.
+                 ¡Todo al día! No hay actividades próximas a vencer ni calificaciones pendientes de captura.
               </div>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -277,14 +276,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     key={item.activity.id}
                     className={`p-3 rounded-lg border flex items-center justify-between gap-3 text-xs transition-all ${
                       item.isPastDue 
-                        ? 'bg-red-50/70 border-red-200 text-red-900' 
-                        : 'bg-amber-50/70 border-amber-200 text-amber-900'
+                        ? 'bg-red-50 border-red-200 text-red-900 dark:bg-red-950/30 dark:border-red-900/60 dark:text-red-100'
+                        : 'bg-amber-50/70 border-amber-200 text-amber-900 dark:bg-amber-950/30 dark:border-amber-900/60 dark:text-amber-100'
                     }`}
                   >
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
                         <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${
-                          item.isPastDue ? 'bg-red-200 text-red-800' : 'bg-amber-200 text-amber-800'
+                          item.isPastDue ? 'bg-red-200 text-red-800 dark:bg-red-900/50 dark:text-red-200' : 'bg-amber-200 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200'
                         }`}>
                           {item.isPastDue ? '⚠️ Pendiente Calificar' : '📌 Entrega Próxima'}
                         </span>
@@ -318,38 +317,38 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <div className="space-y-6">
           
           {/* Teacher Notes & Reminders Widget */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+          <div className="rappi-card p-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <StickyNote className="w-5 h-5 text-amber-500" />
-                Notas del Profesor
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <StickyNote className="w-6 h-6 text-[#FF441F]" />
+                Notas Rápidas
               </h2>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 dark:bg-[#333333] text-gray-500 dark:text-gray-400">
                 {notes.filter(n => !n.completed).length} pendientes
               </span>
             </div>
 
             {/* Quick Add Note Form */}
-            <form onSubmit={handleAddNote} className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+            <form onSubmit={handleAddNote} className="space-y-3 bg-gray-50 dark:bg-[#2A2A2A] p-4 rounded-2xl">
               <input
                 type="text"
                 value={newNoteTitle}
                 onChange={(e) => setNewNoteTitle(e.target.value)}
-                placeholder="Escribe una nota o pendiente..."
-                className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-xs text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
+                placeholder="Escribe una nota..."
+                className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-[#1E1E1E] text-sm text-gray-900 dark:text-white border-none shadow-sm focus:ring-2 focus:ring-[#FF441F] placeholder-gray-400"
               />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <input
                   type="date"
                   value={newNoteDate}
                   onChange={(e) => setNewNoteDate(e.target.value)}
-                  className="flex-1 px-2 py-1 rounded bg-white border border-slate-300 text-xs font-mono focus:outline-none focus:border-blue-600 shadow-inner"
+                  className="flex-1 px-3 py-2.5 rounded-xl bg-white dark:bg-[#1E1E1E] text-sm text-gray-900 dark:text-white border-none shadow-sm focus:ring-2 focus:ring-[#FF441F]"
                 />
                 <button
                   type="submit"
-                  className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1 transition-colors shadow-xs"
+                  className="px-5 py-2.5 rappi-btn-primary flex items-center gap-2 shrink-0"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-4 h-4" />
                   <span>Añadir</span>
                 </button>
               </div>
@@ -456,43 +455,43 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           )}
 
           {/* Quick Navigation Links */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
-            <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-indigo-600" />
+          <div className="rappi-card p-6 space-y-4">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Activity className="w-5 h-5 text-[#FF441F]" />
               Accesos Rápidos
             </h2>
             
-            <div className="flex flex-col gap-1">
-              <button onClick={() => onNavigate('groups_students')} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 text-left transition-colors">
-                <div className="bg-blue-100 text-blue-600 p-1.5 rounded-lg"><Users className="w-4 h-4" /></div>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => onNavigate('groups_students')} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-[#2A2A2A] text-left transition-colors">
+                <div className="bg-gray-100 dark:bg-[#333333] text-gray-600 dark:text-gray-300 p-2.5 rounded-xl"><Users className="w-5 h-5" /></div>
                 <div>
-                  <h4 className="font-semibold text-slate-800 text-xs">Alumnos y Grupos</h4>
-                  <p className="text-[11px] text-slate-500">Directorio e inscripciones</p>
+                  <h4 className="font-bold text-gray-900 dark:text-white text-sm">Alumnos y Grupos</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Directorio e inscripciones</p>
                 </div>
               </button>
-              <button onClick={() => onNavigate('reports')} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 text-left transition-colors">
-                <div className="bg-purple-100 text-purple-600 p-1.5 rounded-lg"><FileText className="w-4 h-4" /></div>
+              <button onClick={() => onNavigate('reports')} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-[#2A2A2A] text-left transition-colors">
+                <div className="bg-gray-100 dark:bg-[#333333] text-gray-600 dark:text-gray-300 p-2.5 rounded-xl"><FileText className="w-5 h-5" /></div>
                 <div>
-                  <h4 className="font-semibold text-slate-800 text-xs">Reportes Oficiales</h4>
-                  <p className="text-[11px] text-slate-500">Imprimir sábanas y boletas</p>
+                  <h4 className="font-bold text-gray-900 dark:text-white text-sm">Reportes Oficiales</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Imprimir sábanas y boletas</p>
                 </div>
               </button>
             </div>
           </div>
 
           {/* Cloud Sync Status */}
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 text-white shadow-lg relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><Cloud className="w-20 h-20" /></div>
+          <div className="bg-[#121212] rounded-[2rem] p-6 text-white shadow-lg relative overflow-hidden">
+            <div className="absolute -top-4 -right-4 opacity-5 pointer-events-none"><Cloud className="w-32 h-32" /></div>
             <div className="relative z-10">
-              <h4 className="font-bold text-sm flex items-center gap-2 mb-1">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                Supabase Sync
+              <h4 className="font-bold text-base flex items-center gap-2 mb-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                Sincronización en Nube
               </h4>
-              <p className="text-[11px] text-slate-300 leading-relaxed mb-3">
-                Datos sincronizados y respaldados en la nube de forma segura.
+              <p className="text-xs text-gray-400 leading-relaxed mb-4">
+                Tus datos están respaldados de forma segura.
               </p>
-              <button onClick={() => onNavigate('settings')} className="text-xs font-semibold bg-white/10 hover:bg-white/20 transition-colors px-3 py-1.5 rounded-lg border border-white/10 w-full text-center">
-                Ver estado del servidor
+              <button onClick={() => onNavigate('settings')} className="text-sm font-bold bg-white/10 hover:bg-white/20 transition-colors px-4 py-2.5 rounded-xl border border-white/5 w-full text-center active:scale-95">
+                Ver Estado
               </button>
             </div>
           </div>

@@ -228,7 +228,8 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
     const gradesPayload = activeStudents.map(stu => {
       const raw = scoresMap[stu.id]?.score || '0';
       const num = parseFloat(raw);
-      const safe = isNaN(num) ? 0 : Math.max(0, Math.min(10, num));
+      const maxScore = Math.max(1, Number(activeActivity.maxScore) || 10);
+      const safe = isNaN(num) ? 0 : Math.max(0, Math.min(maxScore, num));
       return {
         studentId: stu.id,
         score: safe,
@@ -272,9 +273,9 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
     return (
       <div className="space-y-3">
         {/* Header Bar */}
-        <div className="bg-white border border-slate-300 rounded shadow-xs p-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="rappi-card p-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded bg-slate-100 border border-slate-300 text-slate-700">
+            <div className="p-2 rounded-xl bg-orange-50 border border-orange-200 text-[#FF441F]">
               <GraduationCap className="w-4 h-4" />
             </div>
             <div>
@@ -294,8 +295,8 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
 
         {/* Groups Grid */}
         {groups.length === 0 ? (
-          <div className="bg-white border border-slate-300 rounded p-8 text-center shadow-xs space-y-3">
-            <div className="w-10 h-10 rounded bg-slate-100 border border-slate-300 flex items-center justify-center mx-auto text-slate-500">
+          <div className="rappi-card p-8 text-center space-y-3">
+            <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-300 flex items-center justify-center mx-auto text-slate-500">
               <FolderOpen className="w-5 h-5" />
             </div>
             <div className="max-w-md mx-auto space-y-1">
@@ -320,12 +321,12 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
                 <div
                   key={group.id}
                   onClick={() => onSelectGroup(group.id)}
-                  className="bg-white border border-slate-300 hover:border-slate-400 rounded p-3.5 shadow-xs cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
+                  className="rappi-card p-4 cursor-pointer hover:border-[#FF441F]/40 hover:shadow-md transition-all flex flex-col justify-between space-y-3 group"
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
+                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#FF441F] transition-colors">
                           {group.name}
                         </h3>
                         <p className="text-[11px] text-slate-500">
@@ -344,9 +345,9 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs font-semibold text-blue-700">
+                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs font-semibold text-[#FF441F]">
                     <span>Abrir Cuaderno de Calificaciones</span>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-700 transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#FF441F] transition-colors" />
                   </div>
                 </div>
               );
@@ -364,7 +365,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
     return (
       <div className="space-y-3">
         {/* Top Activity Header */}
-        <div className="bg-white border border-slate-300 rounded shadow-xs p-3 space-y-2.5">
+        <div className="rappi-card p-4 space-y-2.5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button
@@ -394,7 +395,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
               <button
                 onClick={handleSaveAllGrades}
                 disabled={activeStudents.length === 0}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs transition-colors border border-blue-800 disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 rappi-btn-primary text-xs disabled:opacity-50 shadow-md"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>Guardar Calificaciones</span>
@@ -450,8 +451,8 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
         </div>
 
         {/* Students Grade Table */}
-        <div className="bg-white border border-slate-300 rounded shadow-xs overflow-hidden">
-          <div className="bg-slate-100 px-3 py-2 border-b border-slate-300 flex items-center justify-between">
+        <div className="rappi-card overflow-hidden">
+          <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               Lista de Alumnos ({activeStudents.length})
             </h3>
@@ -542,7 +543,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
   return (
     <div className="space-y-4">
       {/* Group Navigation Bar */}
-      <div className="bg-white border border-slate-300 rounded shadow-xs p-3.5 space-y-3">
+      <div className="rappi-card p-4 space-y-3 mb-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button
@@ -570,7 +571,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleOpenNewModal}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs transition-colors border border-blue-800"
+              className="flex items-center gap-1.5 px-4 py-2 rappi-btn-primary text-xs shadow-md"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>Nueva Actividad / Tarea</span>
@@ -733,7 +734,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
 
                       <button
                         onClick={() => setGradingActivityId(act.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold transition-colors shadow-xs"
+                        className="flex items-center gap-1.5 px-4 py-2 rappi-btn-primary text-xs shadow-md"
                       >
                         <CheckSquare className="w-3.5 h-3.5" />
                         <span>{gradedCount > 0 ? 'Modificar Calificaciones' : 'Calificar Alumnos'}</span>
@@ -749,8 +750,8 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
 
       {/* ================= PESTAÑA: SÁBANA GENERAL DE CALIFICACIONES ================= */}
       {currentTab === 'matrix' && (
-        <div className="bg-white border border-slate-300 rounded shadow-xs overflow-hidden space-y-0">
-          <div className="bg-slate-100 px-3 py-2 border-b border-slate-300 flex items-center justify-between">
+        <div className="rappi-card overflow-hidden space-y-0">
+          <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               Sábana General de Calificaciones • {activeGroup.name}
             </h3>
@@ -911,7 +912,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
                   type="number"
                   min="1"
                   max="100"
-                  step="1"
+                  step="0.1"
                   value={modalForm.maxScore}
                   onChange={(e) => setModalForm(prev => ({ ...prev, maxScore: parseFloat(e.target.value) || 10 }))}
                   className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner font-mono"

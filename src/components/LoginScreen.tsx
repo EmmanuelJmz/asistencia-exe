@@ -29,66 +29,66 @@ export const LoginScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="login-screen min-h-screen bg-slate-50 dark:bg-[#121212] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decorations */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
+      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-[#FF441F] rounded-full mix-blend-multiply filter blur-[128px] opacity-10"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-orange-400 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
 
-      <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-8 w-full max-w-md relative z-10">
+      <div className="bg-white/80 dark:bg-[#1E1E1E]/90 backdrop-blur-xl border border-white/50 dark:border-[#333333] rounded-[2rem] shadow-[0_20px_40px_-15px_rgba(255,68,31,0.15)] p-8 w-full max-w-md relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="p-3 bg-blue-500/10 rounded-xl mb-4 border border-blue-500/20">
-            <ShieldCheck className="w-10 h-10 text-blue-400" />
+          <div className="p-4 bg-orange-100 rounded-2xl mb-4 border border-orange-200">
+            <ShieldCheck className="w-10 h-10 text-[#FF441F]" />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Acceso Seguro</h1>
-          <p className="text-slate-400 text-sm mt-1">Ingresa tus credenciales para continuar</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Acceso Seguro</h1>
+          <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Ingresa tus credenciales para continuar</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-slate-300 text-xs font-semibold mb-1.5 uppercase tracking-wider">
+            <label className="block text-slate-700 dark:text-gray-300 text-xs font-semibold mb-1.5 uppercase tracking-wider">
               Usuario
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-slate-500" />
+                <User className="h-5 w-5 text-slate-500 dark:text-gray-400" />
               </div>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="ej: director"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-[#242424] border border-slate-200 dark:border-[#404040] rounded-xl text-slate-800 dark:text-gray-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FF441F] focus:border-transparent transition-all"
                 disabled={isLoading}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-300 text-xs font-semibold mb-1.5 uppercase tracking-wider">
+            <label className="block text-slate-700 dark:text-gray-300 text-xs font-semibold mb-1.5 uppercase tracking-wider">
               Contraseña
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-slate-500" />
+                <Lock className="h-5 w-5 text-slate-500 dark:text-gray-400" />
               </div>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-[#242424] border border-slate-200 dark:border-[#404040] rounded-xl text-slate-800 dark:text-gray-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FF441F] focus:border-transparent transition-all"
                 disabled={isLoading}
               />
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-gray-300 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
               disabled={isLoading}
-              className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-blue-600 focus:ring-blue-500"
+              className="w-4 h-4 rounded border-slate-300 text-[#FF441F] focus:ring-[#FF441F]"
             />
             <span>Recordarme en este equipo</span>
           </label>
@@ -102,7 +102,7 @@ export const LoginScreen: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-lg shadow-lg shadow-blue-500/25 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+            className="w-full py-3 px-4 rappi-btn-primary disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>

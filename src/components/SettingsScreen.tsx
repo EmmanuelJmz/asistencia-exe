@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   Settings, 
   School, 
@@ -19,6 +19,13 @@ import {
 import { UserSettings } from '../types';
 import { dbService } from '../db/databaseService';
 
+const ACCENT_COLORS = [
+  { name: 'Naranja', value: '#FF441F' }, { name: 'Morado', value: '#7C3AED' },
+  { name: 'Azul', value: '#2563EB' }, { name: 'Rojo', value: '#DC2626' },
+  { name: 'Verde', value: '#059669' }, { name: 'Ámbar', value: '#D97706' },
+  { name: 'Rosa', value: '#DB2777' }, { name: 'Turquesa', value: '#0891B2' },
+];
+
 interface SettingsScreenProps {
   settings: UserSettings;
   onSettingsChanged: (newSettings: UserSettings) => void;
@@ -33,6 +40,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onOpenSqliteInspector,
 }) => {
   const [formData, setFormData] = useState<UserSettings>({ ...settings });
+
+  useEffect(() => setFormData({ ...settings }), [settings]);
   const [settingsFeedback, setSettingsFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,9 +95,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   return (
     <div className="space-y-4 max-w-4xl mx-auto">
       {/* Title */}
-      <div className="bg-white border border-slate-300 rounded shadow-xs p-3 flex items-center justify-between">
+      <div className="rappi-card p-4 flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded bg-blue-50 border border-blue-200 text-blue-800">
+          <div className="p-2 rounded-xl bg-orange-50 border border-orange-200 text-[#FF441F]">
             <Settings className="w-4 h-4" />
           </div>
           <div>
@@ -104,9 +113,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         
         {/* Profile & School Card */}
-        <div className="bg-white border border-slate-300 rounded shadow-xs overflow-hidden">
-          <div className="bg-slate-100 px-3 py-2 border-b border-slate-300 flex items-center gap-2 text-xs font-bold text-slate-800">
-            <School className="w-3.5 h-3.5 text-blue-700" />
+        <div className="rappi-card overflow-hidden">
+          <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-2 text-xs font-bold text-slate-800">
+            <School className="w-3.5 h-3.5 text-[#FF441F]" />
             <span>Datos del Plantel y Docente Titular</span>
           </div>
 
@@ -151,6 +160,25 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </select>
             </div>
 
+            <div>
+              <label className="font-semibold text-slate-700 block mb-2">Color de la interfaz:</label>
+              <div className="flex flex-wrap gap-2">
+                {ACCENT_COLORS.map((color) => (
+                  <button key={color.value} type="button" aria-label={`Usar color ${color.name}`}
+                    title={color.name} aria-pressed={(formData.accentColor || '#FF441F') === color.value}
+                    onClick={() => {
+                      const changed = { ...formData, accentColor: color.value };
+                      setFormData(changed);
+                      onSettingsChanged(dbService.updateSettings(changed));
+                    }}
+                    className="theme-swatch" style={{ backgroundColor: color.value }} />
+                ))}
+                <span className="self-center text-[11px] text-slate-500 ml-1">
+                  {ACCENT_COLORS.find((c) => c.value === (formData.accentColor || '#FF441F'))?.name || 'Naranja'}
+                </span>
+              </div>
+            </div>
+
             {settingsFeedback && (
               <div className="p-2 rounded bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs text-center flex items-center justify-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -161,7 +189,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <div className="pt-1">
               <button
                 type="submit"
-                className="w-full py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs transition-colors border border-blue-800 shadow-xs"
+                className="w-full py-2 rappi-btn-primary text-xs shadow-md"
               >
                 Guardar Cambios del Perfil
               </button>
@@ -170,19 +198,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
 
         {/* Security & Authentication Info Card */}
-        <div className="bg-white border border-slate-300 rounded shadow-xs overflow-hidden">
-          <div className="bg-slate-100 px-3 py-2 border-b border-slate-300 flex items-center gap-2 text-xs font-bold text-slate-800">
-            <KeyRound className="w-3.5 h-3.5 text-blue-700" />
+        <div className="rappi-card overflow-hidden">
+          <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-2 text-xs font-bold text-slate-800">
+            <KeyRound className="w-3.5 h-3.5 text-[#FF441F]" />
             <span>Seguridad de Cuenta y Autenticación</span>
           </div>
 
           <div className="p-3.5 space-y-3 text-xs">
-            <div className="p-3 rounded bg-blue-50 border border-blue-200 text-blue-900 space-y-1">
-              <div className="flex items-center gap-2 font-bold text-xs text-blue-800">
-                <ShieldAlert className="w-4 h-4 text-blue-600" />
+            <div className="p-4 rounded-xl bg-orange-50 border border-orange-200 text-orange-900 space-y-1">
+              <div className="flex items-center gap-2 font-bold text-xs text-orange-800">
+                <ShieldAlert className="w-4 h-4 text-[#FF441F]" />
                 <span>Acceso Protegido por Supabase Auth</span>
               </div>
-              <p className="text-[11px] text-blue-700">
+              <p className="text-[11px] text-orange-700">
                 El acceso a este sistema se realiza mediante tu usuario y contraseña de docente. La sesión está encriptada y sincronizada en tiempo real.
               </p>
             </div>
@@ -193,9 +221,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
 
         {/* Regular Data Backup & Restore */}
-        <div className="bg-white border border-slate-300 rounded shadow-xs overflow-hidden md:col-span-2">
-          <div className="bg-slate-100 px-3 py-2 border-b border-slate-300 flex items-center gap-2 text-xs font-bold text-slate-800">
-            <Download className="w-3.5 h-3.5 text-blue-700" />
+        <div className="rappi-card overflow-hidden md:col-span-2">
+          <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-2 text-xs font-bold text-slate-800">
+            <Download className="w-3.5 h-3.5 text-[#FF441F]" />
             <span>Respaldo y Seguridad de la Información</span>
           </div>
 
@@ -207,7 +235,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <div className="flex flex-wrap items-center gap-2.5 pt-1">
               <button
                 onClick={handleExportRawData}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white border border-blue-800 font-semibold text-xs transition-colors shadow-xs"
+                className="flex items-center gap-1.5 px-4 py-2 rappi-btn-primary text-xs shadow-md"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Descargar Copia de Respaldo (.JSON)</span>
@@ -223,7 +251,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-semibold text-xs transition-colors shadow-xs"
+                className="flex items-center gap-1.5 px-4 py-2 rappi-btn-secondary text-xs shadow-sm"
               >
                 <Upload className="w-3.5 h-3.5 text-slate-700" />
                 <span>Restaurar Copia de Respaldo</span>

@@ -19,7 +19,8 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
   const [studentForm, setStudentForm] = useState({
     firstName: '',
     lastName: '',
-    status: 'Active' as const,
+    status: 'Activo' as const,
+    groupId: '',
     notes: '',
   });
 
@@ -65,6 +66,11 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
     });
     setIsNewStudentModalOpen(true);
   };
+  
+  const handleGetGroupName = (groupId: string | undefined) => {
+    if (!groupId) return '-';
+    return dbService.getGroupNameById(groupId) || '-';
+  };
 
   const handleSaveEditStudent = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,10 +98,10 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
-      <div className="bg-white border border-slate-300 rounded shadow-xs p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="rappi-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <Users className="w-5 h-5 text-indigo-600" />
+            <Users className="w-5 h-5 text-[#FF441F]" />
             Directorio Global de Alumnos
           </h1>
           <p className="text-xs text-slate-500 mt-1 max-w-lg">
@@ -104,15 +110,15 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
         </div>
         <button
           onClick={handleOpenNewStudent}
-          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-md transition-all shrink-0"
+          className="flex items-center justify-center gap-2 px-4 py-2 rappi-btn-primary text-sm font-bold shadow-md shrink-0"
         >
           <UserPlus className="w-4 h-4" />
           Nuevo Alumno Global
         </button>
       </div>
 
-      <div className="bg-white border border-slate-300 rounded shadow-xs overflow-hidden">
-        <div className="p-3 bg-slate-50 border-b border-slate-200">
+      <div className="rappi-card overflow-hidden">
+        <div className="p-4 bg-slate-50 border-b border-slate-200">
           <div className="relative max-w-md">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -120,7 +126,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar alumno global por nombre o apellido..."
-              className="w-full pl-9 pr-3 py-2 rounded bg-white border border-slate-300 text-sm text-slate-800 focus:outline-none focus:border-indigo-500 shadow-inner"
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-[#FF441F] focus:ring-1 focus:ring-[#FF441F] shadow-inner"
             />
           </div>
         </div>
@@ -133,6 +139,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
                 <th className="py-2.5 px-4">Apellidos</th>
                 <th className="py-2.5 px-4">Nombres</th>
                 <th className="py-2.5 px-4">Estatus</th>
+                <th className="py-2.5 px-4">Grupo</th>
                 <th className="py-2.5 px-4 hidden md:table-cell">Notas / Tutor</th>
                 <th className="py-2.5 px-4 text-center w-24">Acciones</th>
               </tr>
@@ -144,7 +151,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <Users className="w-8 h-8 text-slate-300" />
                       <p>No hay alumnos en el directorio global.</p>
-                      <button onClick={handleOpenNewStudent} className="text-indigo-600 font-bold hover:underline">
+                      <button onClick={handleOpenNewStudent} className="text-[#FF441F] font-bold hover:underline">
                         Agregar el primero
                       </button>
                     </div>
@@ -164,6 +171,9 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
                       }`}>
                         {student.status === 'Active' ? 'Activo' : 'Baja'}
                       </span>
+                    </td>
+                    <td className="py-2 px-4 hidden md:table-cell text-xs text-slate-500 truncate max-w-[200px]">
+                      {student.groupId ? handleGetGroupName(student.groupId) : '-'}
                     </td>
                     <td className="py-2 px-4 hidden md:table-cell text-xs text-slate-500 truncate max-w-[200px]">
                       {student.notes || '-'}
@@ -195,9 +205,9 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
       </div>
 
       {isNewStudentModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-400 rounded shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-slate-800 text-white px-4 py-3 flex items-center justify-between font-bold">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-gradient-to-r from-[#FF441F] to-[#ff6b4a] text-white px-4 py-3 flex items-center justify-between font-bold">
               <span>{editingStudent ? 'Editar Alumno Global' : 'Nuevo Alumno Global'}</span>
               <button onClick={() => setIsNewStudentModalOpen(false)} className="text-slate-300 hover:text-white">✕</button>
             </div>
@@ -210,7 +220,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
                     required
                     value={studentForm.firstName}
                     onChange={(e) => setStudentForm({ ...studentForm, firstName: e.target.value })}
-                    className="w-full px-3 py-2 rounded bg-white border border-slate-300 focus:outline-none focus:border-indigo-600 shadow-inner"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 focus:outline-none focus:border-[#FF441F] shadow-inner"
                   />
                 </div>
                 <div>
@@ -220,7 +230,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
                     required
                     value={studentForm.lastName}
                     onChange={(e) => setStudentForm({ ...studentForm, lastName: e.target.value })}
-                    className="w-full px-3 py-2 rounded bg-white border border-slate-300 focus:outline-none focus:border-indigo-600 shadow-inner"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 focus:outline-none focus:border-[#FF441F] shadow-inner"
                   />
                 </div>
               </div>
@@ -230,7 +240,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
                 <select
                   value={studentForm.status}
                   onChange={(e) => setStudentForm({ ...studentForm, status: e.target.value as any })}
-                  className="w-full px-3 py-2 rounded bg-white border border-slate-300 focus:outline-none focus:border-indigo-600 shadow-inner"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 focus:outline-none focus:border-[#FF441F] shadow-inner"
                 >
                   <option value="Active">Activo</option>
                   <option value="Inactive">Baja Temporal / Inactivo</option>
@@ -243,7 +253,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
                   rows={2}
                   value={studentForm.notes}
                   onChange={(e) => setStudentForm({ ...studentForm, notes: e.target.value })}
-                  className="w-full px-3 py-2 rounded bg-white border border-slate-300 focus:outline-none focus:border-indigo-600 shadow-inner"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 focus:outline-none focus:border-[#FF441F] shadow-inner"
                 />
               </div>
 
@@ -251,13 +261,13 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsNewStudentModalOpen(false)}
-                  className="px-4 py-2 rounded bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-sm"
+                  className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-sm"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md"
+                  className="px-5 py-2 rappi-btn-primary font-bold text-sm shadow-md"
                 >
                   {editingStudent ? 'Guardar Cambios' : 'Guardar Alumno'}
                 </button>

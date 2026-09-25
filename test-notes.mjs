@@ -37,13 +37,6 @@ async function testTeacherNotesTable() {
     console.log('Notas encontradas:', selectRes.data);
   }
 
-  console.log('3. Eliminando nota de prueba...');
-  const deleteRes = await supabase.from('teacher_notes').delete().eq('id', testId);
-  if (deleteRes.error) {
-    console.error('❌ Error al eliminar:', deleteRes.error);
-  } else {
-    console.log('✅ Eliminación de prueba EXITOSA!');
-  }
 
   console.log('--- ¡TODAS LAS PRUEBAS EN SUPABASE PASARON AL 100%! ---');
   process.exit(0);

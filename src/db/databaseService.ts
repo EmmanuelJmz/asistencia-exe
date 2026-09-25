@@ -28,7 +28,7 @@ class SupabaseService {
   private grades: Grade[] = [];
   private teacherNotes: TeacherNote[] = [];
   private security: SecurityConfig = { id: 'sec-1', pin: '1234', failedAttempts: 0, lockedUntilTimestamp: 0 };
-  private settings: UserSettings = { teacherName: 'Profesor Titular', schoolName: 'Escuela Secundaria', theme: 'light', fontSize: 'normal', autoLockMinutes: 10 };
+  private settings: UserSettings = { teacherName: 'Profesor Titular', schoolName: 'Escuela Secundaria', theme: 'light', accentColor: '#FF441F', fontSize: 'normal', autoLockMinutes: 10 };
 
   constructor() {
     this.loadFromLocal();
@@ -50,7 +50,7 @@ class SupabaseService {
       const gr = localStorage.getItem(STORAGE_KEYS.GRADES); if(gr) this.grades = JSON.parse(gr);
       const n = localStorage.getItem(STORAGE_KEYS.NOTES); if(n) this.teacherNotes = JSON.parse(n);
       const sec = localStorage.getItem(STORAGE_KEYS.SECURITY); if(sec) this.security = JSON.parse(sec);
-      const set = localStorage.getItem(STORAGE_KEYS.SETTINGS); if(set) this.settings = JSON.parse(set);
+      const set = localStorage.getItem(STORAGE_KEYS.SETTINGS); if(set) this.settings = { ...this.settings, ...JSON.parse(set) };
     } catch(e) {}
   }
 
@@ -118,6 +118,7 @@ class SupabaseService {
         if (s.teachername || s.teacherName) mappedSettings.teacherName = s.teachername || s.teacherName;
         if (s.schoolname || s.schoolName) mappedSettings.schoolName = s.schoolname || s.schoolName;
         if (s.theme) mappedSettings.theme = s.theme;
+        if (s.accentcolor || s.accentColor) mappedSettings.accentColor = s.accentcolor || s.accentColor;
         if (s.fontsize || s.fontSize) mappedSettings.fontSize = s.fontsize || s.fontSize;
         if (s.autolockminutes || s.autoLockMinutes) mappedSettings.autoLockMinutes = Number(s.autolockminutes || s.autoLockMinutes);
 
@@ -164,6 +165,11 @@ class SupabaseService {
       console.error('Error loading from cloud, using local cache', e);
       this.ensureGlobalPool();
     }
+  }
+
+  public getGroupNameById(id: string): string {
+    const group = this.groups.find(g => g.id === id);
+    return group ? group.name : 'Sin grupo';
   }
 
   private ensureGlobalPool() {
@@ -228,15 +234,34 @@ class SupabaseService {
     this.bgUpsert('groups', updated);
   }
   public deleteGroup(id: string): void {
+    const deletedStudents = this.students.filter(s => s.groupId === id);
+    const deletedSessions = this.sessions.filter(s => s.groupId === id);
+    const deletedActivities = this.activities.filter(a => a.groupId === id);
+    const sessionIds = new Set(deletedSessions.map(session => session.id));
+    const activityIds = new Set(deletedActivities.map(activity => activity.id));
+    const deletedAttendance = this.attendanceRecords.filter(record => sessionIds.has(record.sessionId));
+    const deletedGrades = this.grades.filter(grade => grade.groupId === id || (grade.activityId && activityIds.has(grade.activityId)));
+
     this.groups = this.groups.filter(g => g.id !== id);
     this.students = this.students.filter(s => s.groupId !== id);
     this.sessions = this.sessions.filter(s => s.groupId !== id);
-    this.grades = this.grades.filter(g => g.groupId !== id);
+    this.attendanceRecords = this.attendanceRecords.filter(record => !sessionIds.has(record.sessionId));
+    this.activities = this.activities.filter(activity => activity.groupId !== id);
+    this.grades = this.grades.filter(grade => !deletedGrades.includes(grade));
+
     this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
     this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
     this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions);
+    this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
+    this.persistLocal(STORAGE_KEYS.ACTIVITIES, this.activities);
     this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
+
     this.bgDelete('groups', id);
+    deletedStudents.forEach(student => this.bgDelete('students', student.id));
+    deletedSessions.forEach(session => this.bgDelete('attendance_sessions', session.id));
+    deletedAttendance.forEach(record => this.bgDelete('attendance_records', record.id));
+    deletedActivities.forEach(activity => this.bgDelete('activities', activity.id));
+    deletedGrades.forEach(grade => this.bgDelete('grades', grade.id));
   }
 
   // ==================== STUDENTS ====================
