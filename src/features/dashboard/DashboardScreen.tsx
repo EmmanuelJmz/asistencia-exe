@@ -17,8 +17,8 @@ import {
   Plus,
   Bell
 } from 'lucide-react';
-import { Group, Student, ActiveScreen, DatabaseStats, TeacherNote } from '../types';
-import { dbService } from '../db/databaseService';
+import { Group, Student, ActiveScreen, DatabaseStats, TeacherNote } from '../../shared/types';
+import { schoolData } from '../../application/schoolData';
 
 interface DashboardScreenProps {
   groups: Group[];
@@ -48,21 +48,21 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
-    setNotes(dbService.getTeacherNotes());
+    setNotes(schoolData.getTeacherNotes());
     return () => clearInterval(timer);
   }, []);
 
   const timeString = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
   const dateString = now.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const allActivities = dbService.getActivities();
-  const settings = dbService.getSettings();
+  const allActivities = schoolData.getActivities();
+  const settings = schoolData.getSettings();
   const todayStr = new Date().toISOString().split('T')[0];
 
   // Calculate upcoming and pending grading activities
   const activityAlerts = allActivities.map(act => {
     const grp = groups.find(g => g.id === act.groupId);
     const grpStudents = students.filter(s => s.groupId === act.groupId && s.status === 'Active');
-    const existingGrades = dbService.getActivityGrades(act.id);
+    const existingGrades = schoolData.getActivityGrades(act.id);
     const gradedCount = existingGrades.length;
     const pendingCount = Math.max(0, grpStudents.length - gradedCount);
 
@@ -83,7 +83,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const handleAddNote = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNoteTitle.trim()) return;
-    dbService.addTeacherNote({
+    schoolData.addTeacherNote({
       title: newNoteTitle.trim(),
       dueDate: newNoteDate || undefined,
       groupId: selectedGroupId || undefined,
@@ -91,17 +91,17 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     setNewNoteTitle('');
     setNewNoteDate('');
     setSelectedGroupId('');
-    setNotes(dbService.getTeacherNotes());
+    setNotes(schoolData.getTeacherNotes());
   };
 
   const handleToggleNote = (id: string) => {
-    dbService.toggleTeacherNote(id);
-    setNotes(dbService.getTeacherNotes());
+    schoolData.toggleTeacherNote(id);
+    setNotes(schoolData.getTeacherNotes());
   };
 
   const handleDeleteNote = (id: string) => {
-    dbService.deleteTeacherNote(id);
-    setNotes(dbService.getTeacherNotes());
+    schoolData.deleteTeacherNote(id);
+    setNotes(schoolData.getTeacherNotes());
   };
 
   return (
@@ -225,7 +225,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                           </div>
                           <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#2A2A2A] px-3 py-1.5 rounded-xl">
                             <Activity className="w-4 h-4 text-gray-400" />
-                            <span className="font-bold">{dbService.getActivities(group.id).length}</span>
+                            <span className="font-bold">{schoolData.getActivities(group.id).length}</span>
                           </div>
                         </div>
                       </div>

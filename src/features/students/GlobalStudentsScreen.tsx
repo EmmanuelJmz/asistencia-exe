@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Users, Search, UserPlus, Edit3, Trash2 } from 'lucide-react';
-import { Student } from '../types';
-import { dbService } from '../db/databaseService';
+import { Student } from '../../shared/types';
+import { schoolData } from '../../application/schoolData';
 
 interface GlobalStudentsScreenProps {
   students: Student[];
@@ -43,7 +43,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
     e.preventDefault();
     if (!studentForm.firstName.trim() || !studentForm.lastName.trim()) return;
     
-    dbService.addStudent({
+    schoolData.addStudent({
       groupId: GLOBAL_POOL_ID,
       firstName: studentForm.firstName.trim(),
       lastName: studentForm.lastName.trim(),
@@ -69,14 +69,14 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
   
   const handleGetGroupName = (groupId: string | undefined) => {
     if (!groupId) return '-';
-    return dbService.getGroupNameById(groupId) || '-';
+    return schoolData.getGroupNameById(groupId) || '-';
   };
 
   const handleSaveEditStudent = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingStudent || !studentForm.firstName.trim() || !studentForm.lastName.trim()) return;
     
-    dbService.updateStudent({
+    schoolData.updateStudent({
       ...editingStudent,
       firstName: studentForm.firstName.trim(),
       lastName: studentForm.lastName.trim(),
@@ -91,7 +91,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
 
   const handleDeleteStudent = (id: string) => {
     if (window.confirm('¿Está seguro de eliminar a este alumno del directorio global?')) {
-      dbService.deleteStudent(id);
+      schoolData.deleteStudent(id);
       onDataChanged();
     }
   };

@@ -1,19 +1,19 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
-import { ActiveScreen, Group, Student, Subject, Period, UserSettings, DatabaseStats } from './types';
-import { dbService } from './db/databaseService';
-import { LoginScreen } from './components/LoginScreen';
-import { Header } from './components/Header';
-import { WhatsNewModal } from './components/WhatsNewModal';
-import { LoadingScreen } from './components/LoadingScreen';
-import { ConnectionErrorScreen } from './components/ConnectionErrorScreen';
+import { ActiveScreen, Group, Student, Subject, Period, UserSettings, DatabaseStats } from '../shared/types';
+import { schoolData } from '../application/schoolData';
+import { LoginScreen } from '../features/auth/LoginScreen';
+import { Header } from '../shared/components/Header';
+import { WhatsNewModal } from '../shared/components/WhatsNewModal';
+import { LoadingScreen } from '../shared/components/LoadingScreen';
+import { ConnectionErrorScreen } from '../shared/components/ConnectionErrorScreen';
 
-const DashboardScreen = lazy(() => import('./components/DashboardScreen').then(module => ({ default: module.DashboardScreen })));
-const GlobalStudentsScreen = lazy(() => import('./components/GlobalStudentsScreen').then(module => ({ default: module.GlobalStudentsScreen })));
-const GroupsStudentsScreen = lazy(() => import('./components/GroupsStudentsScreen').then(module => ({ default: module.GroupsStudentsScreen })));
-const AttendanceScreen = lazy(() => import('./components/AttendanceScreen').then(module => ({ default: module.AttendanceScreen })));
-const GradesFunnelScreen = lazy(() => import('./components/GradesFunnelScreen').then(module => ({ default: module.GradesFunnelScreen })));
-const ReportsScreen = lazy(() => import('./components/ReportsScreen').then(module => ({ default: module.ReportsScreen })));
-const SettingsScreen = lazy(() => import('./components/SettingsScreen').then(module => ({ default: module.SettingsScreen })));
+const DashboardScreen = lazy(() => import('../features/dashboard/DashboardScreen').then(module => ({ default: module.DashboardScreen })));
+const GlobalStudentsScreen = lazy(() => import('../features/students/GlobalStudentsScreen').then(module => ({ default: module.GlobalStudentsScreen })));
+const GroupsStudentsScreen = lazy(() => import('../features/groups/GroupsStudentsScreen').then(module => ({ default: module.GroupsStudentsScreen })));
+const AttendanceScreen = lazy(() => import('../features/attendance/AttendanceScreen').then(module => ({ default: module.AttendanceScreen })));
+const GradesFunnelScreen = lazy(() => import('../features/grades/GradesFunnelScreen').then(module => ({ default: module.GradesFunnelScreen })));
+const ReportsScreen = lazy(() => import('../features/reports/ReportsScreen').then(module => ({ default: module.ReportsScreen })));
+const SettingsScreen = lazy(() => import('../features/settings/SettingsScreen').then(module => ({ default: module.SettingsScreen })));
 
 const CURRENT_VERSION = 'v1.3.0';
 
@@ -38,16 +38,16 @@ export function App() {
   const [students, setStudents] = useState<Student[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [periods, setPeriods] = useState<Period[]>([]);
-  const [settings, setSettings] = useState<UserSettings>(dbService.getSettings());
-  const [stats, setStats] = useState<DatabaseStats>(dbService.getStats());
+  const [settings, setSettings] = useState<UserSettings>(schoolData.getSettings());
+  const [stats, setStats] = useState<DatabaseStats>(schoolData.getStats());
 
   const refreshData = () => {
-    const grps = dbService.getGroups();
-    const stus = dbService.getStudents();
-    const subs = dbService.getSubjects();
-    const pers = dbService.getPeriods();
-    const sets = dbService.getSettings();
-    const st = dbService.getStats();
+    const grps = schoolData.getGroups();
+    const stus = schoolData.getStudents();
+    const subs = schoolData.getSubjects();
+    const pers = schoolData.getPeriods();
+    const sets = schoolData.getSettings();
+    const st = schoolData.getStats();
 
     setGroups(grps);
     setStudents(stus);
@@ -63,7 +63,7 @@ export function App() {
   useEffect(() => {
     const init = async () => {
       // 1. Check current session
-      const currentSession = await dbService.getSession();
+      const currentSession = await schoolData.getSession();
       setSession(currentSession);
       setIsInitializingAuth(false);
       
@@ -71,7 +71,7 @@ export function App() {
       if (currentSession) {
         setIsLoading(true);
         try {
-          await dbService.loadFromCloud();
+          await schoolData.loadFromCloud();
           refreshData();
           setDataLoadError(false);
         } catch {
@@ -86,10 +86,10 @@ export function App() {
     init();
 
     // 2. Listen for auth changes (login/logout)
-    const { data: authListener } = dbService.onAuthStateChange(async (newSession) => {
+    const { data: authListener } = schoolData.onAuthStateChange(async (newSession) => {
       setSession(newSession);
       if (!newSession) {
-        dbService.clearInMemoryData();
+        schoolData.clearInMemoryData();
         refreshData();
         setDataLoadError(false);
         setIsLoading(false);
@@ -97,7 +97,7 @@ export function App() {
         setIsLoading(true);
         setDataLoadError(false);
         try {
-          await dbService.loadFromCloud();
+          await schoolData.loadFromCloud();
           refreshData();
         } catch {
           setDataLoadError(true);
@@ -149,7 +149,7 @@ export function App() {
     let timer: ReturnType<typeof setTimeout>;
     const lockAfterInactivity = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => { void dbService.logout(); }, settings.autoLockMinutes * 60_000);
+      timer = setTimeout(() => { void schoolData.logout(); }, settings.autoLockMinutes * 60_000);
     };
     const activityEvents: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
     activityEvents.forEach(eventName => window.addEventListener(eventName, lockAfterInactivity, { passive: true }));
@@ -188,7 +188,7 @@ export function App() {
   };
 
   const handleLockApp = async () => {
-    await dbService.logout();
+    await schoolData.logout();
   };
 
   if (isInitializingAuth) {
@@ -208,7 +208,7 @@ export function App() {
       setIsLoading(true);
       setDataLoadError(false);
       try {
-        await dbService.loadFromCloud();
+        await schoolData.loadFromCloud();
         refreshData();
       } catch {
         setDataLoadError(true);
@@ -232,7 +232,7 @@ export function App() {
         onToggleDesign={() => setDesignMode(mode => mode === 'classic' ? 'new' : 'classic')}
         onToggleTheme={() => {
           const newTheme = settings.theme === 'dark' ? 'light' : 'dark';
-          const updated = dbService.updateSettings({ ...settings, theme: newTheme });
+          const updated = schoolData.updateSettings({ ...settings, theme: newTheme });
           setSettings(updated);
         }}
       />

@@ -22,8 +22,8 @@ import {
   AttendanceSession, 
   AttendanceRecord, 
   AttendanceStatus 
-} from '../types';
-import { dbService } from '../db/databaseService';
+} from '../../shared/types';
+import { schoolData } from '../../application/schoolData';
 
 interface AttendanceScreenProps {
   groups: Group[];
@@ -57,7 +57,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
   const [tempNoteText, setTempNoteText] = useState('');
 
   const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
-  const rawAttendance = dbService.getRawTables();
+  const rawAttendance = schoolData.getRawTables();
 
   const getGroupAttendanceStatus = (group: Group) => {
     const groupStudents = students.filter(s => s.groupId === group.id && s.status === 'Active');
@@ -77,7 +77,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
   // Load or create attendance session whenever group or date changes
   useEffect(() => {
     if (activeGroup) {
-      const data = dbService.getOrCreateAttendanceSession(activeGroup.id, selectedDate);
+      const data = schoolData.getOrCreateAttendanceSession(activeGroup.id, selectedDate);
       setSession(data.session);
       setRecords(data.records);
       setIsDirty(false);
@@ -173,7 +173,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
     if (!session || records.length === 0) return;
     if (!window.confirm(`¿Desea limpiar toda la asistencia de ${activeGroup?.name || 'este grupo'} para el ${selectedDate}? Esta acción se aplicará al guardar.`)) return;
     if (session.isLocked) {
-      const reopenedSession = dbService.commitAttendanceSave(session.id, false);
+      const reopenedSession = schoolData.commitAttendanceSave(session.id, false);
       setSession(reopenedSession);
     }
     setRecords([]);
@@ -182,8 +182,8 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
 
   const handleSaveAndLock = (lock: boolean) => {
     if (!session) return;
-    if (isDirty) dbService.saveAttendanceRecords(session.id, records);
-    const updatedSession = dbService.commitAttendanceSave(session.id, lock);
+    if (isDirty) schoolData.saveAttendanceRecords(session.id, records);
+    const updatedSession = schoolData.commitAttendanceSave(session.id, lock);
     setSession(updatedSession);
     setIsSavedBanner(true);
     setIsDirty(false);

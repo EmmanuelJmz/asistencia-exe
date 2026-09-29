@@ -1,5 +1,5 @@
 import React from 'react';
-import { Group, Student, Activity, Grade } from '../types';
+import { Group, Student, Activity, Grade } from '../../shared/types';
 
 type EvaluateStudentsScreenProps = {
   groups: Group[];

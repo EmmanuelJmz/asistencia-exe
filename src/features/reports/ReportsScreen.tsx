@@ -17,8 +17,8 @@ import {
   Subject, 
   Period, 
   UserSettings
-} from '../types';
-import { dbService } from '../db/databaseService';
+} from '../../shared/types';
+import { schoolData } from '../../application/schoolData';
 
 interface ReportsScreenProps {
   groups: Group[];
@@ -43,7 +43,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
   const [selectedReportDate, setSelectedReportDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
 
-  const raw = dbService.getRawTables();
+  const raw = schoolData.getRawTables();
 
   const groupStudents = activeGroup
     ? students

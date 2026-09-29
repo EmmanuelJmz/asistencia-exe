@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, User, ShieldCheck, Loader2 } from 'lucide-react';
-import { dbService } from '../db/databaseService';
+import { schoolData } from '../../application/schoolData';
 
 export const LoginScreen: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -19,7 +19,7 @@ export const LoginScreen: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await dbService.login(username, password);
+      await schoolData.login(username, password);
       // App.tsx auth listener will automatically handle the redirect
     } catch (err: any) {
       const message = String(err?.message || '').toLowerCase();

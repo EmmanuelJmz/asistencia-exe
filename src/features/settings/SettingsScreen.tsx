@@ -8,8 +8,8 @@ import {
   CheckCircle2, 
   ShieldAlert, 
 } from 'lucide-react';
-import { UserSettings } from '../types';
-import { dbService } from '../db/databaseService';
+import { UserSettings } from '../../shared/types';
+import { schoolData } from '../../application/schoolData';
 
 const ACCENT_COLORS = [
   { name: 'Naranja', value: '#FF441F' }, { name: 'Morado', value: '#7C3AED' },
@@ -38,7 +38,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = dbService.updateSettings(formData);
+    const updated = schoolData.updateSettings(formData);
     onSettingsChanged(updated);
     setSettingsFeedback('Ajustes guardados correctamente. Recargando...');
     setTimeout(() => {
@@ -47,7 +47,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   };
 
   const handleExportRawData = () => {
-    const data = dbService.getRawTables();
+    const data = schoolData.getRawTables();
     const jsonStr = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -67,7 +67,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
-        const success = dbService.importDatabaseBackup(json);
+        const success = schoolData.importDatabaseBackup(json);
         if (success) {
           alert('Copia de respaldo restaurada exitosamente.');
           onDataReset();
@@ -141,7 +141,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   const newTheme = e.target.value as 'light' | 'dark';
                   const updatedFormData = { ...formData, theme: newTheme };
                   setFormData(updatedFormData);
-                  const updated = dbService.updateSettings(updatedFormData);
+                  const updated = schoolData.updateSettings(updatedFormData);
                   onSettingsChanged(updated);
                 }}
                 className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-xs text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
@@ -173,7 +173,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                           ? { ...formData, accentColor: 'custom', colorHex: formData.colorHex || '#7C3AED' }
                           : { ...formData, accentColor: color.value };
                         setFormData(changed);
-                        onSettingsChanged(dbService.updateSettings(changed));
+                        onSettingsChanged(schoolData.updateSettings(changed));
                       }}
                       className="theme-swatch"
                       style={{ background: color.value === 'custom' ? `linear-gradient(135deg, ${swatchColor} 0 50%, #F8FAFC 50% 100%)` : swatchColor }}
@@ -189,7 +189,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     onChange={(e) => {
                       const changed = { ...formData, accentColor: 'custom', colorHex: e.target.value };
                       setFormData(changed);
-                      onSettingsChanged(dbService.updateSettings(changed));
+                      onSettingsChanged(schoolData.updateSettings(changed));
                     }}
                     className="h-9 w-12 rounded border border-slate-300 cursor-pointer"
                   />
