@@ -304,8 +304,8 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
             <div>
-              <label className="font-semibold text-slate-700 block mb-1">Grupo Escolar:</label>
-              <select
+              <label htmlFor="attendance-group" className="font-semibold text-slate-700 block mb-1">Grupo Escolar:</label>
+              <select id="attendance-group"
                 value={activeGroup ? activeGroup.id : ''}
                 onChange={(e) => handleGroupChange(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 font-medium focus:outline-none focus:border-[#FF441F] shadow-inner"
@@ -324,8 +324,8 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
             </div>
 
             <div>
-              <label className="font-semibold text-slate-700 block mb-1">Fecha de la Sesión:</label>
-              <input
+              <label htmlFor="attendance-date" className="font-semibold text-slate-700 block mb-1">Fecha de la Sesión:</label>
+              <input id="attendance-date"
                 type="date"
                 value={selectedDate}
                 onChange={(e) => handleDateChange(e.target.value)}
@@ -334,8 +334,8 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
             </div>
 
             <div>
-              <label className="font-semibold text-slate-700 block mb-1">Ordenar Alumnos:</label>
-              <select
+              <label htmlFor="attendance-sort" className="font-semibold text-slate-700 block mb-1">Ordenar Alumnos:</label>
+              <select id="attendance-sort"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
                 className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 font-medium focus:outline-none focus:border-[#FF441F] shadow-inner"
@@ -349,7 +349,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
             </div>
 
             <div>
-              <label className="font-semibold text-slate-700 block mb-1">Estado de la Sesión:</label>
+              <span className="font-semibold text-slate-700 block mb-1">Estado de la Sesión:</span>
               <div className="px-3 py-1.5 rounded bg-slate-50 border border-slate-300 flex items-center justify-between">
                 <span className="text-slate-600 text-xs font-medium">Registro:</span>
                 {session?.isLocked ? (

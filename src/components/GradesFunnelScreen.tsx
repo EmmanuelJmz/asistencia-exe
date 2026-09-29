@@ -261,7 +261,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
   const highest = parsedScores.length > 0 ? Math.max(...parsedScores).toFixed(1) : '0.0';
   const lowest = parsedScores.length > 0 ? Math.min(...parsedScores).toFixed(1) : '0.0';
 
-  // Helper badge color for activity types (clean, sober desktop tags)
+  // Helper badge color for activity types
   const getTypeColor = (_type: ActivityType) => {
     return 'bg-slate-100 text-slate-700 border-slate-300 font-medium';
   };
@@ -502,6 +502,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
                           <div className="flex items-center justify-center">
                             <input
                               type="number"
+                              aria-label={`Calificación de ${student.firstName} ${student.lastName}`}
                               min="0"
                               max={activeActivity.maxScore || 10}
                               step="0.1"
@@ -519,6 +520,7 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
                         <td className="py-2 px-3">
                           <input
                             type="text"
+                            aria-label={`Observación para ${student.firstName} ${student.lastName}`}
                             value={studentData.observation}
                             onChange={(e) => handleObservationChange(student.id, e.target.value)}
                             placeholder="Comentario para el alumno o tutor (opcional)..."
@@ -861,10 +863,10 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
 
             <form onSubmit={handleSaveActivityModal} className="p-4 space-y-3 text-xs">
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">
+                <label htmlFor="activity-title" className="font-semibold text-slate-700 block mb-1">
                   Título de la Actividad o Tarea: *
                 </label>
-                <input
+                <input id="activity-title"
                   type="text"
                   required
                   value={modalForm.title}
@@ -876,10 +878,10 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1">
+                  <label htmlFor="activity-type" className="font-semibold text-slate-700 block mb-1">
                     Tipo de Actividad:
                   </label>
-                  <select
+                  <select id="activity-type"
                     value={modalForm.type}
                     onChange={(e) => setModalForm(prev => ({ ...prev, type: e.target.value as ActivityType }))}
                     className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
@@ -891,10 +893,10 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
                 </div>
 
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1">
+                  <label htmlFor="activity-due-date" className="font-semibold text-slate-700 block mb-1">
                     Fecha de Entrega / Aplicación:
                   </label>
-                  <input
+                  <input id="activity-due-date"
                     type="date"
                     required
                     value={modalForm.dueDate}
@@ -905,10 +907,10 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">
+                <label htmlFor="activity-max-score" className="font-semibold text-slate-700 block mb-1">
                   Puntaje Máximo (Escala):
                 </label>
-                <input
+                <input id="activity-max-score"
                   type="number"
                   min="1"
                   max="100"
@@ -920,10 +922,10 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = ({
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">
+                <label htmlFor="activity-description" className="font-semibold text-slate-700 block mb-1">
                   Descripción o Instrucciones (Opcional):
                 </label>
-                <textarea
+                <textarea id="activity-description"
                   rows={2}
                   value={modalForm.description}
                   onChange={(e) => setModalForm(prev => ({ ...prev, description: e.target.value }))}

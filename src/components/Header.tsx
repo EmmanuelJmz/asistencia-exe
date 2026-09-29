@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   School,
   Users,
@@ -14,7 +14,9 @@ import {
   LayoutDashboard,
   Sun,
   Moon,
-  Sparkles
+  Sparkles,
+  Menu,
+  X
 } from 'lucide-react';
 import { ActiveScreen, UserSettings } from '../types';
 
@@ -42,6 +44,11 @@ export const Header: React.FC<HeaderProps> = ({
   designMode,
   onToggleDesign
 }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const selectScreen = (screen: ActiveScreen) => {
+    onSelectScreen(screen);
+    setIsMobileMenuOpen(false);
+  };
   const navItems = [
     { id: 'dashboard' as ActiveScreen, label: 'Inicio', icon: LayoutDashboard },
     { id: 'global_students' as ActiveScreen, label: 'Directorio Global', icon: Users },
@@ -54,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   if (designMode === 'classic') {
     return (
-      <header className="classic-header bg-slate-800 text-slate-100 border-b border-slate-700 shadow-sm select-none sticky top-0 z-40 print:hidden">
+      <header onKeyDown={(event) => { if (event.key === 'Escape') setIsMobileMenuOpen(false); }} className="classic-header bg-slate-800 text-slate-100 border-b border-slate-700 shadow-sm select-none sticky top-0 z-40 print:hidden">
         <div className="bg-slate-900 px-3 py-1.5 border-b border-slate-950/60 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2.5">
             <div className="w-5 h-5 rounded bg-blue-700 flex items-center justify-center text-white shadow-xs"><School className="w-3.5 h-3.5" /></div>
@@ -76,30 +83,41 @@ export const Header: React.FC<HeaderProps> = ({
               <Sparkles className="w-3.5 h-3.5" /><span>PROBAR NUEVO SISTEMA</span>
             </button>
             {onToggleTheme && (
-              <button onClick={onToggleTheme} className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition-colors shadow-xs" title={settings.theme === 'dark' ? 'Cambiar a Tema Claro' : 'Cambiar a Tema Oscuro'}>
+              <button type="button" aria-label={settings.theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'} onClick={onToggleTheme} className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition-colors shadow-xs" title={settings.theme === 'dark' ? 'Cambiar a Tema Claro' : 'Cambiar a Tema Oscuro'}>
                 {settings.theme === 'dark' ? <><Sun className="w-3.5 h-3.5 text-amber-400" /><span className="hidden sm:inline text-[11px]">Modo Claro</span></> : <><Moon className="w-3.5 h-3.5 text-slate-300" /><span className="hidden sm:inline text-[11px]">Modo Oscuro</span></>}
               </button>
             )}
-            <button onClick={onLockApp} className="flex items-center gap-1.5 px-3 py-1 rounded bg-red-950/70 hover:bg-red-900 text-red-200 border border-red-800 text-xs font-semibold transition-colors shadow-xs" title="Cerrar sesión">
-              <Lock className="w-3.5 h-3.5 text-red-300" /><span>Cerrar Sesión</span>
+            <button type="button" aria-label="Cerrar sesión" onClick={onLockApp} className="flex items-center gap-1.5 px-3 py-1 rounded bg-red-950/70 hover:bg-red-900 text-red-200 border border-red-800 text-xs font-semibold transition-colors shadow-xs" title="Cerrar sesión">
+              <Lock className="w-3.5 h-3.5 text-red-300" /><span className="hidden sm:inline">Cerrar Sesión</span>
             </button>
           </div>
+          <button type="button" className="mobile-menu-toggle" aria-label={isMobileMenuOpen ? 'Cerrar menú de navegación' : 'Abrir menú de navegación'} aria-expanded={isMobileMenuOpen} aria-controls="mobile-main-nav-classic" onClick={() => setIsMobileMenuOpen(open => !open)}>
+            {isMobileMenuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+          </button>
         </div>
-        <div className="bg-slate-800 px-3 flex items-end overflow-x-auto pt-1 gap-1 border-b border-slate-300 dark:border-slate-700">
+        <nav aria-label="Navegación principal" className="desktop-main-nav bg-slate-800 px-3 items-end overflow-x-auto pt-1 gap-1 border-b border-slate-300 dark:border-slate-700">
           {navItems.map(item => {
             const Icon = item.icon;
             const isActive = currentScreen === item.id;
-            return <button key={item.id} onClick={() => onSelectScreen(item.id)} className={`classic-nav-tab flex items-center gap-2 px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all border-t border-x rounded-t ${isActive ? 'bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-400 border-slate-300 dark:border-slate-700 shadow-xs relative -mb-[1px] font-bold z-10' : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300 hover:text-white border-transparent'}`}>
+            return <button key={item.id} type="button" aria-current={isActive ? 'page' : undefined} onClick={() => selectScreen(item.id)} className={`classic-nav-tab flex items-center gap-2 px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all border-t border-x rounded-t ${isActive ? 'bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-400 border-slate-300 dark:border-slate-700 shadow-xs relative -mb-[1px] font-bold z-10' : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300 hover:text-white border-transparent'}`}>
               <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-700' : 'text-slate-400'}`} /><span>{item.label}</span>
             </button>;
           })}
-        </div>
+        </nav>
+        <nav id="mobile-main-nav-classic" aria-label="Navegación móvil" hidden={!isMobileMenuOpen} className="mobile-main-nav md:hidden">
+            {navItems.map(item => {
+              const Icon = item.icon;
+              return <button key={item.id} type="button" aria-current={currentScreen === item.id ? 'page' : undefined} onClick={() => selectScreen(item.id)}>
+                <Icon aria-hidden="true" /><span>{item.label}</span>
+              </button>;
+            })}
+        </nav>
       </header>
     );
   }
 
   return (
-    <header className="bg-white dark:bg-[#1E1E1E] text-gray-800 dark:text-gray-100 shadow-sm sticky top-0 z-40 print:hidden transition-colors duration-200">
+    <header onKeyDown={(event) => { if (event.key === 'Escape') setIsMobileMenuOpen(false); }} className="bg-white dark:bg-[#1E1E1E] text-gray-800 dark:text-gray-100 shadow-sm sticky top-0 z-40 print:hidden transition-colors duration-200">
       <div className="max-w-7xl mx-auto w-full">
         {/* Top Header Bar */}
         <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100 dark:border-[#333333]">
@@ -135,6 +153,8 @@ export const Header: React.FC<HeaderProps> = ({
 
             {onToggleTheme && (
               <button
+                type="button"
+                aria-label={settings.theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
                 onClick={onToggleTheme}
                 className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 dark:bg-[#2A2A2A] hover:bg-gray-100 dark:hover:bg-[#333333] text-gray-600 dark:text-gray-300 transition-colors"
                 title={settings.theme === 'dark' ? 'Cambiar a Tema Claro' : 'Cambiar a Tema Oscuro'}
@@ -148,6 +168,18 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
             <button
+              type="button"
+              className="mobile-menu-toggle md:hidden"
+              aria-label={isMobileMenuOpen ? 'Cerrar menú de navegación' : 'Abrir menú de navegación'}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-main-nav-modern"
+              onClick={() => setIsMobileMenuOpen(open => !open)}
+            >
+              {isMobileMenuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+            </button>
+            <button
+              type="button"
+              aria-label="Cerrar sesión"
               onClick={onLockApp}
               className="w-10 h-10 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-500 transition-colors"
               title="Cerrar sesión"
@@ -158,14 +190,16 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Navigation Tabs (Modern Scrollable) */}
-        <div className="px-4 flex items-center overflow-x-auto gap-6 py-2 no-scrollbar">
+        <nav aria-label="Navegación principal" className="desktop-main-nav px-4 items-center overflow-x-auto gap-6 py-2 no-scrollbar">
           {navItems.map(item => {
             const Icon = item.icon;
             const isActive = currentScreen === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => onSelectScreen(item.id)}
+                type="button"
+                aria-current={isActive ? 'page' : undefined}
+                onClick={() => selectScreen(item.id)}
                 className={`group flex flex-col items-center gap-1 py-2 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${
                   isActive
                     ? 'border-[#FF441F] text-[#FF441F]'
@@ -183,7 +217,15 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             );
           })}
-        </div>
+        </nav>
+        <nav id="mobile-main-nav-modern" aria-label="Navegación móvil" hidden={!isMobileMenuOpen} className="mobile-main-nav md:hidden">
+            {navItems.map(item => {
+              const Icon = item.icon;
+              return <button key={item.id} type="button" aria-current={currentScreen === item.id ? 'page' : undefined} onClick={() => selectScreen(item.id)}>
+                <Icon aria-hidden="true" /><span>{item.label}</span>
+              </button>;
+            })}
+        </nav>
       </div>
     </header>
   );

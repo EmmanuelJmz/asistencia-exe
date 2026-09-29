@@ -3,18 +3,10 @@ import {
   Settings, 
   School, 
   KeyRound, 
-  Database, 
-  RefreshCw, 
   Download, 
   Upload,
   CheckCircle2, 
   ShieldAlert, 
-  Terminal,
-  AlertTriangle,
-  ChevronDown,
-  ChevronUp,
-  FileCode,
-  Layers
 } from 'lucide-react';
 import { UserSettings } from '../types';
 import { dbService } from '../db/databaseService';
@@ -24,20 +16,19 @@ const ACCENT_COLORS = [
   { name: 'Azul', value: '#2563EB' }, { name: 'Rojo', value: '#DC2626' },
   { name: 'Verde', value: '#059669' }, { name: 'Ámbar', value: '#D97706' },
   { name: 'Rosa', value: '#DB2777' }, { name: 'Turquesa', value: '#0891B2' },
+  { name: 'Personalizado', value: 'custom' }
 ];
 
 interface SettingsScreenProps {
   settings: UserSettings;
   onSettingsChanged: (newSettings: UserSettings) => void;
   onDataReset: () => void;
-  onOpenSqliteInspector?: () => void;
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   settings,
   onSettingsChanged,
   onDataReset,
-  onOpenSqliteInspector,
 }) => {
   const [formData, setFormData] = useState<UserSettings>({ ...settings });
 
@@ -121,8 +112,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
           <form onSubmit={handleSaveProfile} className="p-3.5 space-y-3 text-xs">
             <div>
-              <label className="font-semibold text-slate-700 block mb-1">Nombre Completo del Docente Titular:</label>
-              <input
+              <label htmlFor="settings-teacher-name" className="font-semibold text-slate-700 block mb-1">Nombre Completo del Docente Titular:</label>
+              <input id="settings-teacher-name"
                 type="text"
                 required
                 value={formData.teacherName}
@@ -132,8 +123,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </div>
 
             <div>
-              <label className="font-semibold text-slate-700 block mb-1">Nombre Oficial de la Escuela / Plantel:</label>
-              <input
+              <label htmlFor="settings-school-name" className="font-semibold text-slate-700 block mb-1">Nombre Oficial de la Escuela / Plantel:</label>
+              <input id="settings-school-name"
                 type="text"
                 required
                 value={formData.schoolName}
@@ -143,8 +134,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </div>
 
             <div>
-              <label className="font-semibold text-slate-700 block mb-1">Apariencia / Tema de la Interfaz:</label>
-              <select
+              <label htmlFor="settings-theme" className="font-semibold text-slate-700 block mb-1">Apariencia / Tema de la Interfaz:</label>
+              <select id="settings-theme"
                 value={formData.theme}
                 onChange={(e) => {
                   const newTheme = e.target.value as 'light' | 'dark';
@@ -161,20 +152,51 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </div>
 
             <div>
-              <label className="font-semibold text-slate-700 block mb-2">Color de la interfaz:</label>
+              <span className="font-semibold text-slate-700 block mb-2">Color de la interfaz:</span>
               <div className="flex flex-wrap gap-2">
-                {ACCENT_COLORS.map((color) => (
-                  <button key={color.value} type="button" aria-label={`Usar color ${color.name}`}
-                    title={color.name} aria-pressed={(formData.accentColor || '#FF441F') === color.value}
-                    onClick={() => {
-                      const changed = { ...formData, accentColor: color.value };
+                {ACCENT_COLORS.map((color) => {
+                  const selected = color.value === 'custom'
+                    ? formData.accentColor === 'custom'
+                    : (formData.accentColor || '#FF441F') === color.value;
+                  const swatchColor = color.value === 'custom'
+                    ? (formData.colorHex || '#7C3AED')
+                    : color.value;
+                  return (
+                    <button
+                      key={color.value}
+                      type="button"
+                      aria-label={`Usar color ${color.name}`}
+                      title={color.name}
+                      aria-pressed={selected}
+                      onClick={() => {
+                        const changed = color.value === 'custom'
+                          ? { ...formData, accentColor: 'custom', colorHex: formData.colorHex || '#7C3AED' }
+                          : { ...formData, accentColor: color.value };
+                        setFormData(changed);
+                        onSettingsChanged(dbService.updateSettings(changed));
+                      }}
+                      className="theme-swatch"
+                      style={{ background: color.value === 'custom' ? `linear-gradient(135deg, ${swatchColor} 0 50%, #F8FAFC 50% 100%)` : swatchColor }}
+                    />
+                  );
+                })}
+
+                {formData.accentColor === 'custom' && (
+                  <input
+                    type="color"
+                    aria-label="Elegir color personalizado"
+                    value={formData.colorHex || '#7C3AED'}
+                    onChange={(e) => {
+                      const changed = { ...formData, accentColor: 'custom', colorHex: e.target.value };
                       setFormData(changed);
                       onSettingsChanged(dbService.updateSettings(changed));
                     }}
-                    className="theme-swatch" style={{ backgroundColor: color.value }} />
-                ))}
+                    className="h-9 w-12 rounded border border-slate-300 cursor-pointer"
+                  />
+                )}
+
                 <span className="self-center text-[11px] text-slate-500 ml-1">
-                  {ACCENT_COLORS.find((c) => c.value === (formData.accentColor || '#FF441F'))?.name || 'Naranja'}
+                  {formData.accentColor === 'custom' ? 'Personalizado' : (ACCENT_COLORS.find((c) => c.value === (formData.accentColor || '#FF441F'))?.name || 'Naranja')}
                 </span>
               </div>
             </div>
@@ -211,11 +233,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <span>Acceso Protegido por Supabase Auth</span>
               </div>
               <p className="text-[11px] text-orange-700">
-                El acceso a este sistema se realiza mediante tu usuario y contraseña de docente. La sesión está encriptada y sincronizada en tiempo real.
+                El acceso a este sistema se realiza mediante tu usuario y contraseña de docente. Los permisos de acceso a los datos se validan en Supabase. La sesión solo se conserva en esta pestaña y se elimina al cerrar sesión.
               </p>
             </div>
             <div className="text-[11px] text-slate-500">
-              Estado de Sesión: <strong className="text-emerald-700 font-mono">Activa y Protegida</strong>
+              Sesión actual: <strong className="text-emerald-700 font-mono">Autenticada</strong>
             </div>
           </div>
         </div>

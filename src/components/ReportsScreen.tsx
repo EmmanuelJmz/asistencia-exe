@@ -250,8 +250,8 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
         {/* Filter Controls Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2.5 border-t border-slate-200 text-xs">
           <div>
-            <label className="font-semibold text-slate-700 block mb-1">Grupo Escolar:</label>
-            <select
+            <label htmlFor="report-group" className="font-semibold text-slate-700 block mb-1">Grupo Escolar:</label>
+            <select id="report-group"
               value={activeGroup ? activeGroup.id : ''}
               onChange={(e) => onSelectGroup(e.target.value)}
               className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-xs text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
@@ -265,9 +265,9 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
           </div>
 
           <div>
-            <label className="font-semibold text-slate-700 block mb-1">Alcance del Reporte:</label>
+            <label htmlFor="report-scope" className="font-semibold text-slate-700 block mb-1">Alcance del Reporte:</label>
             <div className="flex items-center gap-2">
-              <select
+              <select id="report-scope"
                 value={reportScope}
                 onChange={(e) => setReportScope(e.target.value as 'all' | 'date')}
                 className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-xs text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
@@ -277,6 +277,8 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
               </select>
               {reportScope === 'date' && (
                 <input
+                  id="report-date"
+                  aria-label="Fecha específica del reporte"
                   type="date"
                   value={selectedReportDate}
                   onChange={(e) => setSelectedReportDate(e.target.value)}
@@ -287,7 +289,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
           </div>
 
           <div>
-            <label className="font-semibold text-slate-700 block mb-1">Tipo de Reporte:</label>
+            <span className="font-semibold text-slate-700 block mb-1">Tipo de Reporte:</span>
             <div className="flex items-center bg-slate-100/80 rounded-xl p-1 shadow-inner">
               <button
                 onClick={() => setCurrentTab('attendance')}

@@ -123,6 +123,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
+              aria-label="Buscar alumnos del directorio global"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar alumno global por nombre o apellido..."
@@ -214,8 +215,8 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
             <form onSubmit={editingStudent ? handleSaveEditStudent : handleSaveNewStudent} className="p-4 space-y-4 bg-slate-50">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1 text-sm">Nombres:</label>
-                  <input
+                  <label htmlFor="global-student-first-name" className="font-semibold text-slate-700 block mb-1 text-sm">Nombres:</label>
+                  <input id="global-student-first-name"
                     type="text"
                     required
                     value={studentForm.firstName}
@@ -224,8 +225,8 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1 text-sm">Apellidos:</label>
-                  <input
+                  <label htmlFor="global-student-last-name" className="font-semibold text-slate-700 block mb-1 text-sm">Apellidos:</label>
+                  <input id="global-student-last-name"
                     type="text"
                     required
                     value={studentForm.lastName}
@@ -236,8 +237,8 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
               </div>
               
               <div>
-                <label className="font-semibold text-slate-700 block mb-1 text-sm">Estatus Académico:</label>
-                <select
+                <label htmlFor="global-student-status" className="font-semibold text-slate-700 block mb-1 text-sm">Estatus Académico:</label>
+                <select id="global-student-status"
                   value={studentForm.status}
                   onChange={(e) => setStudentForm({ ...studentForm, status: e.target.value as any })}
                   className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 focus:outline-none focus:border-[#FF441F] shadow-inner"
@@ -248,8 +249,8 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1 text-sm">Notas / Tutor:</label>
-                <textarea
+                <label htmlFor="global-student-notes" className="font-semibold text-slate-700 block mb-1 text-sm">Notas / Tutor:</label>
+                <textarea id="global-student-notes"
                   rows={2}
                   value={studentForm.notes}
                   onChange={(e) => setStudentForm({ ...studentForm, notes: e.target.value })}

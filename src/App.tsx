@@ -1,39 +1,39 @@
-import React, { useState, useEffect } from 'react';
-import { ActiveScreen, Group, Student, Subject, Period, UserSettings, DatabaseStats, Activity, Grade } from './types';
-import { EvaluateStudentsScreen } from './components/EvaluateStudentsScreen';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
+import { ActiveScreen, Group, Student, Subject, Period, UserSettings, DatabaseStats } from './types';
 import { dbService } from './db/databaseService';
 import { LoginScreen } from './components/LoginScreen';
 import { Header } from './components/Header';
-import { DashboardScreen } from './components/DashboardScreen';
-import { GlobalStudentsScreen } from './components/GlobalStudentsScreen';
-import { GroupsStudentsScreen } from './components/GroupsStudentsScreen';
-import { AttendanceScreen } from './components/AttendanceScreen';
-import { GradesFunnelScreen } from './components/GradesFunnelScreen';
-import { ReportsScreen } from './components/ReportsScreen';
-import { SettingsScreen } from './components/SettingsScreen';
-import { SqliteInspectorModal } from './components/SqliteInspectorModal';
 import { WhatsNewModal } from './components/WhatsNewModal';
+import { LoadingScreen } from './components/LoadingScreen';
+import { ConnectionErrorScreen } from './components/ConnectionErrorScreen';
+
+const DashboardScreen = lazy(() => import('./components/DashboardScreen').then(module => ({ default: module.DashboardScreen })));
+const GlobalStudentsScreen = lazy(() => import('./components/GlobalStudentsScreen').then(module => ({ default: module.GlobalStudentsScreen })));
+const GroupsStudentsScreen = lazy(() => import('./components/GroupsStudentsScreen').then(module => ({ default: module.GroupsStudentsScreen })));
+const AttendanceScreen = lazy(() => import('./components/AttendanceScreen').then(module => ({ default: module.AttendanceScreen })));
+const GradesFunnelScreen = lazy(() => import('./components/GradesFunnelScreen').then(module => ({ default: module.GradesFunnelScreen })));
+const ReportsScreen = lazy(() => import('./components/ReportsScreen').then(module => ({ default: module.ReportsScreen })));
+const SettingsScreen = lazy(() => import('./components/SettingsScreen').then(module => ({ default: module.SettingsScreen })));
 
 const CURRENT_VERSION = 'v1.3.0';
 
 export function App() {
   const [session, setSession] = useState<any>(null);
   const [designMode, setDesignMode] = useState<'classic' | 'new'>(() =>
-    localStorage.getItem('edugestion_design_mode') === 'new' ? 'new' : 'classic'
+    sessionStorage.getItem('edugestion_design_mode') === 'new' ? 'new' : 'classic'
   );
   const [isInitializingAuth, setIsInitializingAuth] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<ActiveScreen>(() => {
-    return (localStorage.getItem('currentScreen') as ActiveScreen) || 'dashboard';
+    return (sessionStorage.getItem('currentScreen') as ActiveScreen) || 'dashboard';
   });
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(() => {
-    return localStorage.getItem('selectedGroupId') || null;
+    return sessionStorage.getItem('selectedGroupId') || null;
   });
-  const [isSqliteModalOpen, setIsSqliteModalOpen] = useState<boolean>(false);
   const [isWhatsNewOpen, setIsWhatsNewOpen] = useState<boolean>(() => {
-    return localStorage.getItem('edugestion_last_version') !== CURRENT_VERSION;
+    return sessionStorage.getItem('edugestion_last_version') !== CURRENT_VERSION;
   });
 
-  // Core Data States from local SQLite database repository
+  // Core data loaded from Supabase and kept in memory for this session
   const [groups, setGroups] = useState<Group[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -58,6 +58,7 @@ export function App() {
   };
 
   const [isLoading, setIsLoading] = useState(true);
+  const [dataLoadError, setDataLoadError] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -69,8 +70,16 @@ export function App() {
       // Only load data if we have a session
       if (currentSession) {
         setIsLoading(true);
-        await dbService.loadFromCloud();
-        refreshData();
+        try {
+          await dbService.loadFromCloud();
+          refreshData();
+          setDataLoadError(false);
+        } catch {
+          setDataLoadError(true);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
         setIsLoading(false);
       }
     };
@@ -79,11 +88,22 @@ export function App() {
     // 2. Listen for auth changes (login/logout)
     const { data: authListener } = dbService.onAuthStateChange(async (newSession) => {
       setSession(newSession);
-      if (newSession) {
-        setIsLoading(true);
-        await dbService.loadFromCloud();
+      if (!newSession) {
+        dbService.clearInMemoryData();
         refreshData();
+        setDataLoadError(false);
         setIsLoading(false);
+      } else {
+        setIsLoading(true);
+        setDataLoadError(false);
+        try {
+          await dbService.loadFromCloud();
+          refreshData();
+        } catch {
+          setDataLoadError(true);
+        } finally {
+          setIsLoading(false);
+        }
       }
     });
 
@@ -94,7 +114,7 @@ export function App() {
 
   useEffect(() => {
     document.documentElement.dataset.designMode = designMode;
-    localStorage.setItem('edugestion_design_mode', designMode);
+    sessionStorage.setItem('edugestion_design_mode', designMode);
   }, [designMode]);
 
   useEffect(() => {
@@ -104,11 +124,41 @@ export function App() {
       '#059669': ['#059669', '#34D399'], '#D97706': ['#D97706', '#FBBF24'],
       '#DB2777': ['#DB2777', '#F472B6'], '#0891B2': ['#0891B2', '#22D3EE'],
     };
-    const [main, light] = palettes[settings.accentColor] || palettes['#FF441F'];
+    const main = settings.accentColor === 'custom' ? (settings.colorHex || '#7C3AED') : settings.accentColor;
+    const light = palettes[main]?.[1] || `color-mix(in srgb, ${main} 62%, white)`;
+    const channels = main.match(/[a-f0-9]{2}/gi)?.map(channel => parseInt(channel, 16) / 255) || [1, 0.27, 0.12];
+    const getLuminance = (rgb: number[]) => rgb.map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+      .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+    const luminance = getLuminance(channels);
+    const contrast = luminance > 0.179 ? '#17212B' : '#FFFFFF';
+    const lightTextChannels = [...channels];
+    while (getLuminance(lightTextChannels) > 0.17) lightTextChannels.forEach((channel, index) => { lightTextChannels[index] = channel * 0.92; });
+    const darkTextChannels = [...channels];
+    while (getLuminance(darkTextChannels) < 0.22) darkTextChannels.forEach((channel, index) => { darkTextChannels[index] += (1 - channel) * 0.08; });
+    const toHex = (rgb: number[]) => `#${rgb.map(value => Math.round(value * 255).toString(16).padStart(2, '0')).join('')}`;
+    document.documentElement.style.setProperty('--accent-text-light', toHex(lightTextChannels));
+    document.documentElement.style.setProperty('--accent-text-dark', toHex(darkTextChannels));
     document.documentElement.style.setProperty('--accent-color', main);
     document.documentElement.style.setProperty('--accent-light', light);
-    document.documentElement.style.setProperty('--accent-hover', main);
-  }, [settings.accentColor]);
+    document.documentElement.style.setProperty('--accent-hover', `color-mix(in srgb, ${main} 84%, black)`);
+    document.documentElement.style.setProperty('--accent-contrast', contrast);
+  }, [settings.accentColor, settings.colorHex]);
+
+  useEffect(() => {
+    if (!session || settings.autoLockMinutes <= 0) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const lockAfterInactivity = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => { void dbService.logout(); }, settings.autoLockMinutes * 60_000);
+    };
+    const activityEvents: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+    activityEvents.forEach(eventName => window.addEventListener(eventName, lockAfterInactivity, { passive: true }));
+    lockAfterInactivity();
+    return () => {
+      clearTimeout(timer);
+      activityEvents.forEach(eventName => window.removeEventListener(eventName, lockAfterInactivity));
+    };
+  }, [session, settings.autoLockMinutes]);
 
   useEffect(() => {
     if (settings.theme === 'dark') {
@@ -119,22 +169,18 @@ export function App() {
   }, [settings.theme]);
 
   useEffect(() => {
-    localStorage.setItem('currentScreen', currentScreen);
+    sessionStorage.setItem('currentScreen', currentScreen);
   }, [currentScreen]);
 
   useEffect(() => {
     if (selectedGroupId) {
-      localStorage.setItem('selectedGroupId', selectedGroupId);
+      sessionStorage.setItem('selectedGroupId', selectedGroupId);
     } else {
-      localStorage.removeItem('selectedGroupId');
+      sessionStorage.removeItem('selectedGroupId');
     }
   }, [selectedGroupId]);
 
   const handleSelectScreen = (screen: ActiveScreen) => {
-    if (screen === 'sqlite_explorer') {
-      setIsSqliteModalOpen(true);
-      return;
-    }
     if (screen === 'grades') {
       setSelectedGroupId(null);
     }
@@ -146,7 +192,7 @@ export function App() {
   };
 
   if (isInitializingAuth) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#121212]"><div className="text-xl font-bold text-[#FF441F] animate-pulse">Conectando...</div></div>;
+    return <LoadingScreen message="Conectando con el servicio de acceso" />;
   }
 
   if (!session) {
@@ -154,11 +200,27 @@ export function App() {
   }
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#121212]"><div className="flex flex-col items-center gap-3"><div className="w-10 h-10 border-4 border-[#FF441F] border-t-transparent rounded-full animate-spin"></div><div className="text-lg font-bold text-gray-800 dark:text-gray-200">Sincronizando con la nube...</div></div></div>;
+    return <LoadingScreen message="Sincronizando datos escolares" />;
+  }
+
+  if (dataLoadError) {
+    return <ConnectionErrorScreen onRetry={async () => {
+      setIsLoading(true);
+      setDataLoadError(false);
+      try {
+        await dbService.loadFromCloud();
+        refreshData();
+      } catch {
+        setDataLoadError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    }} />;
   }
 
   return (
     <div className="min-h-screen flex flex-col selection:bg-[#FF6B4A] selection:text-white">
+      <a className="skip-link" href="#main-content">Saltar al contenido principal</a>
       {/* Top Application Header */}
       <Header
         currentScreen={currentScreen}
@@ -176,7 +238,8 @@ export function App() {
       />
 
       {/* Main Container View */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 print:max-w-none print:p-0">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 print:max-w-none print:p-0">
+        <Suspense fallback={<LoadingScreen message="Cargando sección" />}>
         {currentScreen === 'dashboard' && (
           <DashboardScreen
             groups={groups}
@@ -253,9 +316,9 @@ export function App() {
               refreshData();
             }}
             onDataReset={refreshData}
-            onOpenSqliteInspector={() => setIsSqliteModalOpen(true)}
           />
         )}
+        </Suspense>
       </main>
 
       {/* Clean Statusbar */}
@@ -274,9 +337,6 @@ export function App() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="hidden md:inline">
-            Sesión Protegida
-          </span>
           <button 
             onClick={() => setIsWhatsNewOpen(true)}
             className="border-l border-gray-200 dark:border-[#333333] pl-3 text-[#FF441F] font-bold hover:text-[#E03514] transition-colors cursor-pointer flex items-center gap-1"
@@ -286,16 +346,11 @@ export function App() {
         </div>
       </footer>
 
-      {/* SQLite Inspector Modal */}
-      {isSqliteModalOpen && (
-        <SqliteInspectorModal onClose={() => setIsSqliteModalOpen(false)} />
-      )}
-
       {/* WhatsNew Release Notes Modal */}
       <WhatsNewModal
         isOpen={isWhatsNewOpen}
         onClose={() => {
-          localStorage.setItem('edugestion_last_version', CURRENT_VERSION);
+          sessionStorage.setItem('edugestion_last_version', CURRENT_VERSION);
           setIsWhatsNewOpen(false);
         }}
         version={CURRENT_VERSION}

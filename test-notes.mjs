@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+/*import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 
 const supabaseUrl = 'https://cofjdiwflmxwcbmlctzi.supabase.co';
@@ -43,3 +43,4 @@ async function testTeacherNotesTable() {
 }
 
 testTeacherNotesTable();
+*/

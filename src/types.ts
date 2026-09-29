@@ -94,6 +94,7 @@ export interface UserSettings {
   schoolName: string;
   theme: 'dark' | 'light' | 'system';
   accentColor: string;
+  colorHex?: string;
   fontSize: 'small' | 'normal' | 'large';
   autoLockMinutes: number;
 }
@@ -123,5 +124,4 @@ export type ActiveScreen =
   | 'attendance'
   | 'grades'
   | 'reports'
-  | 'settings'
-  | 'sqlite_explorer';
+  | 'settings';

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  Users, 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  UserPlus, 
-  Search, 
-  ArrowRightLeft, 
-  CheckCircle2, 
+import {
+  Users,
+  Plus,
+  Edit3,
+  Trash2,
+  UserPlus,
+  Search,
+  ArrowRightLeft,
+  CheckCircle2,
   XCircle,
   MoreVertical,
   School,
@@ -320,7 +320,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
       status: studentForm.status,
       notes: studentForm.notes?.trim(),
     });
-    
+
     setIsSaving(false);
     onDataChanged();
     setIsNewStudentModalOpen(false);
@@ -335,11 +335,11 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
   const handleExecuteImport = async () => {
     if (!activeGroup || selectedImportStudentIds.size === 0) return;
     setIsSaving(true);
-    
+
     await new Promise(resolve => setTimeout(resolve, 800)); // Un poco más largo para importar varios
 
     let nextRoll = students.filter(s => s.groupId === activeGroup.id).length + 1;
-    
+
     selectedImportStudentIds.forEach(stuId => {
       const stuToCopy = students.find(s => s.id === stuId);
       if (stuToCopy) {
@@ -353,7 +353,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
         });
       }
     });
-    
+
     setIsSaving(false);
     onDataChanged();
     setIsImportModalOpen(false);
@@ -683,6 +683,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                     <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
+                      aria-label="Filtrar alumnos del grupo por apellido, nombre o número de lista"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Filtrar por apellidos, nombre o N°..."
@@ -690,6 +691,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                     />
                   </div>
                   <select
+                    aria-label="Ordenar alumnos del grupo"
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
                     className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-300 text-xs text-slate-800 font-medium focus:outline-none focus:border-[#FF441F] shadow-inner shrink-0"
@@ -701,7 +703,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                     <option value="firstName_asc">Nombre (A - Z)</option>
                   </select>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   <div className="text-[11px] text-slate-600 font-semibold hidden sm:block shrink-0">
                     {groupStudents.length} Alumnos
@@ -850,7 +852,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                               {student.status === 'Active' ? 'Activo' : 'Baja'}
                             </button>
                           </div>
-                          
+
                           {student.notes && (
                             <div className="px-2.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-[10px] line-clamp-2">
                               <strong>Obs:</strong> {student.notes}
@@ -893,8 +895,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                 Ningún grupo seleccionado
               </h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-                {groups.length === 0 
-                  ? 'Para comenzar a inscribir alumnos y pasar lista, primero cree su primer grupo escolar.' 
+                {groups.length === 0
+                  ? 'Para comenzar a inscribir alumnos y pasar lista, primero cree su primer grupo escolar.'
                   : 'Seleccione un grupo de la columna izquierda para administrar su lista de alumnos.'}
               </p>
               {groups.length === 0 && (
@@ -921,8 +923,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
             </div>
             <form onSubmit={handleSaveNewGroup} className="p-4 space-y-3 bg-slate-50 text-xs">
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Nombre del Grupo:</label>
-                <input
+                <label htmlFor="group-name-new" className="font-semibold text-slate-700 block mb-1">Nombre del Grupo:</label>
+                <input id="group-name-new"
                   type="text"
                   required
                   value={groupForm.name}
@@ -932,10 +934,10 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                 />
               </div>
               {/* Advanced fields hidden for simplicity, defaults will be used */}
-              
+
               <div className="mb-4">
-                <label className="font-semibold text-slate-700 block mb-1">Color Identificador:</label>
-                <input
+                <label htmlFor="group-color-new" className="font-semibold text-slate-700 block mb-1">Color Identificador:</label>
+                <input id="group-color-new"
                   type="color"
                   value={groupForm.colorHex}
                   onChange={(e) => setGroupForm({ ...groupForm, colorHex: e.target.value })}
@@ -974,8 +976,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
             </div>
             <form onSubmit={handleSaveEditGroup} className="p-4 space-y-3 bg-slate-50 text-xs">
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Nombre del Grupo:</label>
-                <input
+                <label htmlFor="group-name-edit" className="font-semibold text-slate-700 block mb-1">Nombre del Grupo:</label>
+                <input id="group-name-edit"
                   type="text"
                   required
                   value={groupForm.name}
@@ -985,10 +987,10 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
               </div>
 
               {/* Advanced fields hidden for simplicity */}
-              
+
               <div className="mb-4">
-                <label className="font-semibold text-slate-700 block mb-1">Color Identificador:</label>
-                <input
+                <label htmlFor="group-color-edit" className="font-semibold text-slate-700 block mb-1">Color Identificador:</label>
+                <input id="group-color-edit"
                   type="color"
                   value={groupForm.colorHex}
                   onChange={(e) => setGroupForm({ ...groupForm, colorHex: e.target.value })}
@@ -1017,21 +1019,20 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
         </div>
       )}
 
-      {/* ================= MODAL: ELIMINAR GRUPO (CASCADE WARNING) ================= */}
+      {/* ================= MODAL: CONFIRMAR ELIMINACIÓN DE GRUPO ================= */}
       {deletingGroupId && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white border border-red-400 rounded shadow-2xl w-full max-w-md overflow-hidden">
             <div className="bg-red-800 text-white px-3 py-1.5 flex items-center justify-between text-xs font-semibold select-none">
               <div className="flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Confirmar Eliminación en Cascada</span>
+                <span>Confirmar eliminación del grupo</span>
               </div>
               <button onClick={() => setDeletingGroupId(null)} className="text-white hover:opacity-80">✕</button>
             </div>
             <div className="p-4 space-y-3 bg-slate-50 text-xs">
               <p className="text-slate-800 leading-relaxed">
-                Esta acción ejecutará una eliminación en cascada en SQLite (<code className="text-red-700 font-mono font-bold">ON DELETE CASCADE</code>).
-                Se eliminarán de forma definitiva todos los alumnos, asistencias y calificaciones pertenecientes a este grupo.
+                Se eliminarán de forma definitiva este grupo y sus datos asociados en la nube: alumnos, asistencias, actividades y calificaciones.
               </p>
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
                 <button
@@ -1073,8 +1074,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
             <form onSubmit={editingStudent ? handleSaveEditStudent : handleSaveNewStudent} className="p-4 space-y-3 bg-slate-50 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Nombres:</label>
-                  <input
+                  <label htmlFor="student-first-name" className="font-semibold text-slate-700 block mb-1">Nombres:</label>
+                  <input id="student-first-name"
                     type="text"
                     required
                     value={studentForm.firstName}
@@ -1084,8 +1085,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Apellidos:</label>
-                  <input
+                  <label htmlFor="student-last-name" className="font-semibold text-slate-700 block mb-1">Apellidos:</label>
+                  <input id="student-last-name"
                     type="text"
                     required
                     value={studentForm.lastName}
@@ -1099,8 +1100,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 {editingStudent && (
                   <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Número de Lista:</label>
-                    <input
+                    <label htmlFor="student-roll-number" className="font-semibold text-slate-700 block mb-1">Número de Lista:</label>
+                    <input id="student-roll-number"
                       type="number"
                       min={1}
                       required
@@ -1111,8 +1112,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                   </div>
                 )}
                 <div className={!editingStudent ? "col-span-2" : ""}>
-                  <label className="font-semibold text-slate-700 block mb-1">Estatus Académico:</label>
-                  <select
+                  <label htmlFor="student-academic-status" className="font-semibold text-slate-700 block mb-1">Estatus Académico:</label>
+                  <select id="student-academic-status"
                     value={studentForm.status}
                     onChange={(e) => setStudentForm({ ...studentForm, status: e.target.value as any })}
                     className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"
@@ -1124,8 +1125,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Observaciones / Tutor / Notas:</label>
-                <textarea
+                <label htmlFor="student-notes" className="font-semibold text-slate-700 block mb-1">Observaciones / Tutor / Notas:</label>
+                <textarea id="student-notes"
                   rows={2}
                   value={studentForm.notes}
                   onChange={(e) => setStudentForm({ ...studentForm, notes: e.target.value })}
@@ -1188,7 +1189,7 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
                 />
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-2 bg-slate-50 space-y-1">
               {(() => {
                 const otherStudents = students.filter(s => s.groupId !== activeGroup.id);
@@ -1288,8 +1289,8 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = ({
               </p>
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Nuevo Grupo de Destino:</label>
-                <select
+                <label htmlFor="student-target-group" className="font-semibold text-slate-700 block mb-1">Nuevo Grupo de Destino:</label>
+                <select id="student-target-group"
                   value={targetMoveGroupId}
                   onChange={(e) => setTargetMoveGroupId(e.target.value)}
                   className="w-full px-2.5 py-1.5 rounded bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-600 shadow-inner"

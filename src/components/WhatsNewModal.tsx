@@ -29,7 +29,7 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
     },
     {
       title: 'Notas del profesor sincronizadas',
-      description: 'Las notas locales se migran automáticamente a Supabase; las notas largas se abren en un detalle y conservan su estado.'
+      description: 'Las notas del docente se sincronizan con Supabase y conservan su estado de finalización.'
     },
     {
       title: 'Alertas y estadísticas corregidas',

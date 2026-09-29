@@ -1,23 +1,8 @@
 import { Group, Student, AttendanceSession, AttendanceRecord, AttendanceStatus, StudentStatus, Subject, Period, Grade, GradeCategory, Activity, ActivityType, SecurityConfig, DatabaseStats, UserSettings, TeacherNote } from '../types';
 import { supabase } from '../supabaseClient';
-import { INITIAL_GROUPS, INITIAL_STUDENTS, DEMO_SUBJECTS, DEMO_PERIODS } from './sqliteSchema';
-
-const STORAGE_KEYS = {
-  GROUPS: 'edugestion_prod_groups_v2',
-  STUDENTS: 'edugestion_prod_students_v2',
-  SESSIONS: 'edugestion_prod_sessions_v2',
-  ATTENDANCE: 'edugestion_prod_attendance_v2',
-  SUBJECTS: 'edugestion_prod_subjects_v2',
-  PERIODS: 'edugestion_prod_periods_v2',
-  GRADES: 'edugestion_prod_grades_v2',
-  ACTIVITIES: 'edugestion_prod_activities_v2',
-  SECURITY: 'edugestion_prod_security_v2',
-  SETTINGS: 'edugestion_prod_settings_v2',
-  NOTES: 'edugestion_prod_notes_v2',
-};
 
 class SupabaseService {
-  // Local cache
+  // In-memory data for the authenticated browser session
   private groups: Group[] = [];
   private students: Student[] = [];
   private sessions: AttendanceSession[] = [];
@@ -27,40 +12,15 @@ class SupabaseService {
   private activities: Activity[] = [];
   private grades: Grade[] = [];
   private teacherNotes: TeacherNote[] = [];
-  private security: SecurityConfig = { id: 'sec-1', pin: '1234', failedAttempts: 0, lockedUntilTimestamp: 0 };
+  private security: SecurityConfig = { id: 'sec-1', pin: '', failedAttempts: 0, lockedUntilTimestamp: 0 };
   private settings: UserSettings = { teacherName: 'Profesor Titular', schoolName: 'Escuela Secundaria', theme: 'light', accentColor: '#FF441F', fontSize: 'normal', autoLockMinutes: 10 };
-
-  constructor() {
-    this.loadFromLocal();
-  }
 
   private generateId(prefix: string): string {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`;
   }
 
-  private loadFromLocal() {
-    try {
-      const g = localStorage.getItem(STORAGE_KEYS.GROUPS); if(g) this.groups = JSON.parse(g);
-      const s = localStorage.getItem(STORAGE_KEYS.STUDENTS); if(s) this.students = JSON.parse(s);
-      const se = localStorage.getItem(STORAGE_KEYS.SESSIONS); if(se) this.sessions = JSON.parse(se);
-      const a = localStorage.getItem(STORAGE_KEYS.ATTENDANCE); if(a) this.attendanceRecords = JSON.parse(a);
-      const su = localStorage.getItem(STORAGE_KEYS.SUBJECTS); if(su) this.subjects = JSON.parse(su);
-      const p = localStorage.getItem(STORAGE_KEYS.PERIODS); if(p) this.periods = JSON.parse(p);
-      const ac = localStorage.getItem(STORAGE_KEYS.ACTIVITIES); if(ac) this.activities = JSON.parse(ac);
-      const gr = localStorage.getItem(STORAGE_KEYS.GRADES); if(gr) this.grades = JSON.parse(gr);
-      const n = localStorage.getItem(STORAGE_KEYS.NOTES); if(n) this.teacherNotes = JSON.parse(n);
-      const sec = localStorage.getItem(STORAGE_KEYS.SECURITY); if(sec) this.security = JSON.parse(sec);
-      const set = localStorage.getItem(STORAGE_KEYS.SETTINGS); if(set) this.settings = { ...this.settings, ...JSON.parse(set) };
-    } catch(e) {}
-  }
-
-  private persistLocal(key: string, data: any) {
-    try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
-  }
-
   public async loadFromCloud() {
     try {
-      const localTeacherNotes = [...this.teacherNotes];
       const [grp, stu, ses, att, sub, per, act, grd, set, sec, nts] = await Promise.all([
         supabase.from('groups').select('*'),
         supabase.from('students').select('*'),
@@ -74,10 +34,11 @@ class SupabaseService {
         supabase.from('security_config').select('*').limit(1),
         supabase.from('teacher_notes').select('*')
       ]);
+      const queryError = [grp, stu, ses, att, sub, per, act, grd, set, sec, nts].find(result => result.error)?.error;
+      if (queryError) throw queryError;
 
-      if (grp.data && grp.data.length > 0) {
+      if (grp.data) {
         this.groups = grp.data;
-        this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
 
         const settingsRec = grp.data.find((g: any) => g.id === 'grp-app-settings' || g.grade === 'SETTINGS');
         if (settingsRec) {
@@ -85,24 +46,22 @@ class SupabaseService {
             const parsed = JSON.parse(settingsRec.name);
             if (parsed && typeof parsed === 'object') {
               this.settings = { ...this.settings, ...parsed };
-              this.persistLocal(STORAGE_KEYS.SETTINGS, this.settings);
             }
           } catch (e) {}
         }
       }
-      if (stu.data && stu.data.length > 0) { this.students = stu.data; this.persistLocal(STORAGE_KEYS.STUDENTS, this.students); }
-      if (ses.data && ses.data.length > 0) { this.sessions = ses.data; this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions); }
-      if (att.data && att.data.length > 0) {
+      if (stu.data) { this.students = stu.data; }
+      if (ses.data) { this.sessions = ses.data; }
+      if (att.data) {
         // Deduplicate attendance records by sessionId + studentId
         const attMap = new Map<string, AttendanceRecord>();
         att.data.forEach((r: AttendanceRecord) => attMap.set(`${r.sessionId}_${r.studentId}`, r));
         this.attendanceRecords = Array.from(attMap.values());
-        this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
       }
-      if (sub.data && sub.data.length > 0) { this.subjects = sub.data; this.persistLocal(STORAGE_KEYS.SUBJECTS, this.subjects); }
-      if (per.data && per.data.length > 0) { this.periods = per.data; this.persistLocal(STORAGE_KEYS.PERIODS, this.periods); }
-      if (act.data && act.data.length > 0) { this.activities = act.data; this.persistLocal(STORAGE_KEYS.ACTIVITIES, this.activities); }
-      if (grd.data && grd.data.length > 0) {
+      if (sub.data) { this.subjects = sub.data; }
+      if (per.data) { this.periods = per.data; }
+      if (act.data) { this.activities = act.data; }
+      if (grd.data) {
         // Deduplicate grades
         const grdMap = new Map<string, Grade>();
         grd.data.forEach((g: Grade) => {
@@ -110,7 +69,6 @@ class SupabaseService {
           grdMap.set(key, g);
         });
         this.grades = Array.from(grdMap.values());
-        this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
       }
       if (set.data && set.data.length > 0) {
         const s = set.data[0];
@@ -123,11 +81,9 @@ class SupabaseService {
         if (s.autolockminutes || s.autoLockMinutes) mappedSettings.autoLockMinutes = Number(s.autolockminutes || s.autoLockMinutes);
 
         this.settings = { ...this.settings, ...mappedSettings };
-        this.persistLocal(STORAGE_KEYS.SETTINGS, this.settings);
       }
       if (sec.data && sec.data.length > 0) {
         this.security = { ...this.security, ...sec.data[0] };
-        this.persistLocal(STORAGE_KEYS.SECURITY, this.security);
       }
       if (nts.error) {
         console.error('Error loading teacher_notes from Supabase:', nts.error);
@@ -141,29 +97,13 @@ class SupabaseService {
           createdAt: n.createdat || n.createdAt || new Date().toISOString(),
         }));
 
-        const cloudNoteIds = new Set(cloudTeacherNotes.map(note => note.id));
-        const localOnlyNotes = localTeacherNotes.filter(note => !cloudNoteIds.has(note.id));
-
-        if (localOnlyNotes.length > 0) {
-          const { error: migrationError } = await supabase
-            .from('teacher_notes')
-            .upsert(localOnlyNotes.map(note => this.teacherNoteToRow(note)));
-
-          if (migrationError) {
-            console.error('Error migrando notas locales a Supabase:', migrationError);
-          } else {
-            console.info(`Se migraron ${localOnlyNotes.length} nota(s) local(es) a Supabase.`);
-          }
-        }
-
-        this.teacherNotes = [...cloudTeacherNotes, ...localOnlyNotes];
-        this.persistLocal(STORAGE_KEYS.NOTES, this.teacherNotes);
+        this.teacherNotes = cloudTeacherNotes;
       }
       
       this.ensureGlobalPool();
     } catch (e) {
-      console.error('Error loading from cloud, using local cache', e);
-      this.ensureGlobalPool();
+      console.error('Error loading data from Supabase', e);
+      throw e;
     }
   }
 
@@ -185,7 +125,6 @@ class SupabaseService {
         createdAt: new Date().toISOString()
       };
       this.groups.push(globalGrp);
-      this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
       this.bgUpsert('groups', globalGrp);
     }
   }
@@ -224,13 +163,11 @@ class SupabaseService {
   public addGroup(data: Omit<Group, 'id' | 'createdAt'>): Group {
     const newGroup: Group = { ...data, id: this.generateId('grp'), createdAt: new Date().toISOString() };
     this.groups.push(newGroup);
-    this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
     this.bgUpsert('groups', newGroup);
     return newGroup;
   }
   public updateGroup(updated: Group): void {
     this.groups = this.groups.map(g => g.id === updated.id ? updated : g);
-    this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
     this.bgUpsert('groups', updated);
   }
   public deleteGroup(id: string): void {
@@ -248,13 +185,6 @@ class SupabaseService {
     this.attendanceRecords = this.attendanceRecords.filter(record => !sessionIds.has(record.sessionId));
     this.activities = this.activities.filter(activity => activity.groupId !== id);
     this.grades = this.grades.filter(grade => !deletedGrades.includes(grade));
-
-    this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
-    this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
-    this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions);
-    this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
-    this.persistLocal(STORAGE_KEYS.ACTIVITIES, this.activities);
-    this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
 
     this.bgDelete('groups', id);
     deletedStudents.forEach(student => this.bgDelete('students', student.id));
@@ -281,7 +211,6 @@ class SupabaseService {
       s.rollNumber = idx + 1;
       this.bgUpsert('students', s);
     });
-    this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
   }
 
   public getStudents(groupId?: string): Student[] {
@@ -304,7 +233,6 @@ class SupabaseService {
     const s = this.getStudentById(id);
     if(s) { 
       s.status = status; 
-      this.persistLocal(STORAGE_KEYS.STUDENTS, this.students); 
       this.bgUpsert('students', s); 
     }
   }
@@ -324,9 +252,6 @@ class SupabaseService {
     this.attendanceRecords = this.attendanceRecords.filter(r => r.studentId !== id);
     this.grades = this.grades.filter(g => g.studentId !== id);
     if (groupId) this.reorderStudentsAlphabetically(groupId);
-    this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
-    this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
-    this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
     this.bgDelete('students', id);
   }
 
@@ -336,7 +261,6 @@ class SupabaseService {
     if (!session) {
       session = { id: `ses-${groupId}-${date}`, groupId, date, isLocked: false };
       this.sessions.push(session);
-      this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions);
       this.bgUpsert('attendance_sessions', session);
     }
     const records = this.attendanceRecords.filter(r => r.sessionId === session!.id);
@@ -352,7 +276,6 @@ class SupabaseService {
       rec = { id: `att-${sessionId}-${studentId}`, sessionId, studentId, status, note: note || '', timestamp: new Date().toISOString() };
       this.attendanceRecords.push(rec);
     }
-    this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
     this.bgUpsert('attendance_records', rec);
     return rec;
   }
@@ -369,7 +292,6 @@ class SupabaseService {
       }
       this.bgUpsert('attendance_records', rec);
     });
-    this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
   }
   public saveAttendanceRecords(sessionId: string, records: AttendanceRecord[]): void {
     const savedRecords = this.attendanceRecords.filter(record => record.sessionId === sessionId);
@@ -387,14 +309,12 @@ class SupabaseService {
       }
       this.bgUpsert('attendance_records', record);
     });
-    this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
   }
   public commitAttendanceSave(sessionId: string, isLocked: boolean): AttendanceSession {
     const s = this.sessions.find(x => x.id === sessionId)!;
     if (s) {
       s.isLocked = isLocked;
       s.completedAt = new Date().toISOString();
-      this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions);
       this.bgUpsert('attendance_sessions', s);
     }
     return s;
@@ -420,7 +340,6 @@ class SupabaseService {
       grd = { id: uniqueId, studentId: stuId, groupId: grpId, subjectId: subId, periodId: perId, category: cat, activityTitle: title, activityId: activityId, score, observation: obs || '', updatedAt: new Date().toISOString() };
       this.grades.push(grd);
     }
-    this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
     this.bgUpsert('grades', grd);
     return grd;
   }
@@ -434,7 +353,6 @@ class SupabaseService {
   public createActivity(data: Omit<Activity, 'id' | 'createdAt'>): Activity {
     const act: Activity = { ...data, id: this.generateId('act'), createdAt: new Date().toISOString() };
     this.activities.push(act);
-    this.persistLocal(STORAGE_KEYS.ACTIVITIES, this.activities);
     this.bgUpsert('activities', act);
     return act;
   }
@@ -442,15 +360,12 @@ class SupabaseService {
     const idx = this.activities.findIndex(a => a.id === id);
     if (idx === -1) return null;
     this.activities[idx] = { ...this.activities[idx], ...data };
-    this.persistLocal(STORAGE_KEYS.ACTIVITIES, this.activities);
     this.bgUpsert('activities', this.activities[idx]);
     return this.activities[idx];
   }
   public deleteActivity(id: string): boolean {
     this.activities = this.activities.filter(a => a.id !== id);
     this.grades = this.grades.filter(g => g.activityId !== id);
-    this.persistLocal(STORAGE_KEYS.ACTIVITIES, this.activities);
-    this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
     this.bgDelete('activities', id);
     return true;
   }
@@ -481,27 +396,36 @@ class SupabaseService {
       }
       this.bgUpsert('grades', grd);
     });
-    this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
   }
 
   // ==================== SECURITY & AUTHENTICATION ====================
-  public async login(username: string, password: string, rememberMe = true) {
+  public async login(username: string, password: string) {
     const email = `${username.toLowerCase().trim()}@admin.local`;
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
-    if (!rememberMe) {
-      Object.keys(localStorage)
-        .filter(key => key.startsWith('sb-') && key.endsWith('-auth-token'))
-        .forEach(key => localStorage.removeItem(key));
-    }
     return data;
   }
 
   public async logout() {
     await supabase.auth.signOut();
+    this.clearInMemoryData();
+  }
+
+  public clearInMemoryData() {
+    this.groups = [];
+    this.students = [];
+    this.sessions = [];
+    this.attendanceRecords = [];
+    this.subjects = [];
+    this.periods = [];
+    this.activities = [];
+    this.grades = [];
+    this.teacherNotes = [];
+    this.security = { id: 'sec-1', pin: '', failedAttempts: 0, lockedUntilTimestamp: 0 };
+    this.settings = {
+      teacherName: 'Profesor Titular', schoolName: 'Escuela Secundaria',
+      theme: 'light', accentColor: '#FF441F', fontSize: 'normal', autoLockMinutes: 10,
+    };
   }
 
   public async getSession() {
@@ -521,7 +445,6 @@ class SupabaseService {
 
   public updatePin(newPin: string): SecurityConfig {
     this.security = { ...this.security, pin: newPin };
-    this.persistLocal(STORAGE_KEYS.SECURITY, this.security);
     this.bgUpsert('security_config', { id: 'sec-1', ...this.security });
     return this.security;
   }
@@ -529,7 +452,6 @@ class SupabaseService {
   public getSettings(): UserSettings { return { ...this.settings }; }
   public updateSettings(newSettings: Partial<UserSettings>): UserSettings {
     this.settings = { ...this.settings, ...newSettings };
-    this.persistLocal(STORAGE_KEYS.SETTINGS, this.settings);
 
     // 1. Sync to groups table backup container
     const settingsRecord: Group = {
@@ -588,26 +510,6 @@ class SupabaseService {
   }
   public getRawTables() { return { groups: this.groups, students: this.students, sessions: this.sessions, attendanceRecords: this.attendanceRecords, subjects: this.subjects, periods: this.periods, activities: this.activities, grades: this.grades, security: this.security }; }
 
-  public loadDemoData(): void {
-    this.groups = [...INITIAL_GROUPS];
-    this.students = [...INITIAL_STUDENTS];
-    this.subjects = [...DEMO_SUBJECTS];
-    this.periods = [...DEMO_PERIODS];
-    this.activities = [];
-    this.grades = [];
-    this.sessions = [];
-    this.attendanceRecords = [];
-    this.ensureGlobalPool();
-    this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
-    this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
-    this.persistLocal(STORAGE_KEYS.SUBJECTS, this.subjects);
-    this.persistLocal(STORAGE_KEYS.PERIODS, this.periods);
-    this.persistLocal(STORAGE_KEYS.ACTIVITIES, this.activities);
-    this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
-    this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions);
-    this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
-  }
-
   public importDatabaseBackup(data: any): boolean {
     if (!data || typeof data !== 'object') return false;
     try {
@@ -621,17 +523,6 @@ class SupabaseService {
       if (Array.isArray(data.grades)) this.grades = data.grades;
       if (data.security) this.security = data.security;
       if (data.settings) this.settings = data.settings;
-
-      this.persistLocal(STORAGE_KEYS.GROUPS, this.groups);
-      this.persistLocal(STORAGE_KEYS.STUDENTS, this.students);
-      this.persistLocal(STORAGE_KEYS.SESSIONS, this.sessions);
-      this.persistLocal(STORAGE_KEYS.ATTENDANCE, this.attendanceRecords);
-      this.persistLocal(STORAGE_KEYS.SUBJECTS, this.subjects);
-      this.persistLocal(STORAGE_KEYS.PERIODS, this.periods);
-      this.persistLocal(STORAGE_KEYS.ACTIVITIES, this.activities);
-      this.persistLocal(STORAGE_KEYS.GRADES, this.grades);
-      this.persistLocal(STORAGE_KEYS.SECURITY, this.security);
-      this.persistLocal(STORAGE_KEYS.SETTINGS, this.settings);
       this.ensureGlobalPool();
       return true;
     } catch (e) {
@@ -655,7 +546,6 @@ class SupabaseService {
       createdAt: new Date().toISOString(),
     };
     this.teacherNotes.unshift(note);
-    this.persistLocal(STORAGE_KEYS.NOTES, this.teacherNotes);
     // Sync to cloud using new helper
     this.syncTeacherNote(note);
     return note;
@@ -670,7 +560,6 @@ class SupabaseService {
     const note = this.teacherNotes.find(n => n.id === id);
     if (note) {
       note.completed = !note.completed;
-      this.persistLocal(STORAGE_KEYS.NOTES, this.teacherNotes);
       // Sync change
       this.syncTeacherNote(note);
     }
@@ -682,7 +571,6 @@ class SupabaseService {
 
   public deleteTeacherNote(id: string): void {
     this.teacherNotes = this.teacherNotes.filter(n => n.id !== id);
-    this.persistLocal(STORAGE_KEYS.NOTES, this.teacherNotes);
     this.bgDelete('teacher_notes', id);
   }
 

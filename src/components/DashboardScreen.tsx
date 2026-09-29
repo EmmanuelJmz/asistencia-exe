@@ -332,6 +332,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <form onSubmit={handleAddNote} className="space-y-3 bg-gray-50 dark:bg-[#2A2A2A] p-4 rounded-2xl">
               <input
                 type="text"
+                aria-label="Título de la nota del docente"
                 value={newNoteTitle}
                 onChange={(e) => setNewNoteTitle(e.target.value)}
                 placeholder="Escribe una nota..."
@@ -340,6 +341,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               <div className="flex items-center gap-3">
                 <input
                   type="date"
+                  aria-label="Fecha límite de la nota"
                   value={newNoteDate}
                   onChange={(e) => setNewNoteDate(e.target.value)}
                   className="flex-1 px-3 py-2.5 rounded-xl bg-white dark:bg-[#1E1E1E] text-sm text-gray-900 dark:text-white border-none shadow-sm focus:ring-2 focus:ring-[#FF441F]"
