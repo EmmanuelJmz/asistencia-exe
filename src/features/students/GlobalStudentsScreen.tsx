@@ -148,7 +148,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
             <tbody className="divide-y divide-slate-200 text-sm">
               {filteredStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                  <td colSpan={7} className="py-12 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <Users className="w-8 h-8 text-slate-300" />
                       <p>No hay alumnos en el directorio global.</p>
@@ -173,7 +173,7 @@ export const GlobalStudentsScreen: React.FC<GlobalStudentsScreenProps> = ({
                         {student.status === 'Active' ? 'Activo' : 'Baja'}
                       </span>
                     </td>
-                    <td className="py-2 px-4 hidden md:table-cell text-xs text-slate-500 truncate max-w-[200px]">
+                    <td className="py-2 px-4 text-xs text-slate-500 max-w-[140px] md:max-w-[200px] break-words">
                       {student.groupId ? handleGetGroupName(student.groupId) : '-'}
                     </td>
                     <td className="py-2 px-4 hidden md:table-cell text-xs text-slate-500 truncate max-w-[200px]">
