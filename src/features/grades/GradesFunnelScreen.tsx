@@ -140,9 +140,6 @@ export const GradesFunnelScreen: React.FC<GradesFunnelScreenProps> = (props) => 
                         <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#FF441F] transition-colors">
                           {group.name}
                         </h3>
-                        <p className="text-[11px] text-slate-500">
-                          Grado {group.grade} • Sección "{group.section}" • Turno {group.shift}
-                        </p>
                       </div>
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700">
                         {group.schoolYear}

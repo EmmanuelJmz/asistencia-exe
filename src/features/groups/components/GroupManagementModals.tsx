@@ -438,7 +438,7 @@ export const GroupManagementModals: React.FC<GroupManagementModalsProps> = ({
                     .filter(g => g.id !== movingStudent.groupId)
                     .map(g => (
                       <option key={g.id} value={g.id}>
-                        {g.name} ({g.shift})
+                        {g.name}
                       </option>
                     ))}
                 </select>

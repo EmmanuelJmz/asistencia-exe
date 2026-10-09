@@ -260,9 +260,6 @@ export const GroupsStudentsScreen: React.FC<GroupsStudentsScreenProps> = (props)
                       Ciclo {activeGroup.schoolYear}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500">
-                    Grado {activeGroup.grade} | Sección "{activeGroup.section}" | Turno {activeGroup.shift}
-                  </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">

@@ -258,7 +258,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
             >
               {groups.map(g => (
                 <option key={g.id} value={g.id}>
-                  {g.name} ({g.shift})
+                  {g.name}
                 </option>
               ))}
             </select>
