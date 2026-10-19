@@ -7,7 +7,6 @@ import { supabaseAuth } from '../supabase/authRepository';
 import { supabaseSchoolRepository } from '../supabase/schoolRepository';
 
 export abstract class SchoolDataCore {
-  // In-memory data for the authenticated browser session
   protected groups: Group[] = [];
   protected students: Student[] = [];
   protected sessions: AttendanceSession[] = [];
@@ -46,7 +45,6 @@ export abstract class SchoolDataCore {
       if (stu.data) { this.students = stu.data; }
       if (ses.data) { this.sessions = ses.data; }
       if (att.data) {
-        // Deduplicate attendance records by sessionId + studentId
         const attMap = new Map<string, AttendanceRecord>();
         att.data.forEach((r: AttendanceRecord) => attMap.set(`${r.sessionId}_${r.studentId}`, r));
         this.attendanceRecords = Array.from(attMap.values());
@@ -122,7 +120,6 @@ export abstract class SchoolDataCore {
     }
   }
 
-  // ------------------- SYNC HELPERS -------------------
   protected syncGroup(data: any) { supabaseSchoolRepository.upsert('groups', data); }
   protected syncStudent(data: any) { supabaseSchoolRepository.upsert('students', data); }
   protected syncActivity(data: any) { supabaseSchoolRepository.upsert('activities', data); }

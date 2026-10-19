@@ -6,7 +6,7 @@ import {
 import { StudentOperations } from './StudentOperations';
 
 export class AttendanceOperations extends StudentOperations {
-// ==================== ATTENDANCE ====================
+// ==================== asistencia ====================
   public getOrCreateAttendanceSession(groupId: string, date: string) {
     let session = this.sessions.find(s => s.groupId === groupId && s.date === date);
     if (!session) {
@@ -50,15 +50,12 @@ export class AttendanceOperations extends StudentOperations {
     const recordsToRemove = savedRecords.filter(record => !retainedIds.has(record.id));
     const session = this.sessions.find(item => item.id === sessionId);
 
-    // A record cannot be reliably persisted until its session exists remotely.
     if (session) await this.upsert('attendance_sessions', session);
     await Promise.all([
       ...recordsToRemove.map(record => this.removeFromCloud('attendance_records', record.id)),
       ...records.map(record => this.upsert('attendance_records', record)),
     ]);
 
-    // Keep memory in sync only after the complete cloud operation succeeds, so a retry
-    // can still include any removals that failed to persist.
     this.attendanceRecords = [
       ...this.attendanceRecords.filter(record => record.sessionId !== sessionId),
       ...records,

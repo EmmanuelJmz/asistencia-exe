@@ -40,6 +40,8 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
   onSelectGroup,
   onDataChanged,
 }) => {
+  const selectedDateStorageKey = 'edugestion_attendance_selected_date';
+
   const getLocalDateString = () => {
     const d = new Date();
     const year = d.getFullYear();
@@ -48,7 +50,10 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
     return `${year}-${month}-${day}`;
   };
 
-  const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString());
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const savedDate = sessionStorage.getItem(selectedDateStorageKey);
+    return savedDate && /^\d{4}-\d{2}-\d{2}$/.test(savedDate) ? savedDate : getLocalDateString();
+  });
   const [session, setSession] = useState<AttendanceSession | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [isSavedBanner, setIsSavedBanner] = useState(false);
@@ -76,7 +81,6 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
     return { label: 'Pendiente', tone: 'text-slate-500' };
   };
 
-  // Load or create attendance session whenever group or date changes
   useEffect(() => {
     if (activeGroup) {
       const data = schoolData.getOrCreateAttendanceSession(activeGroup.id, selectedDate);
@@ -85,6 +89,10 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
       setIsDirty(false);
     }
   }, [activeGroup, selectedDate]);
+
+  useEffect(() => {
+    sessionStorage.setItem(selectedDateStorageKey, selectedDate);
+  }, [selectedDate]);
 
   const [sortBy, setSortBy] = useState<'lastName_asc' | 'lastName_desc' | 'roll_asc' | 'roll_desc' | 'firstName_asc'>('lastName_asc');
 
@@ -197,14 +205,29 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
       setIsSaving(true);
       setSaveError(null);
       if (isDirty) await schoolData.saveAttendanceRecords(session.id, records);
-      const updatedSession = await schoolData.commitAttendanceSave(session.id, lock);
-      setSession(updatedSession);
+      await schoolData.commitAttendanceSave(session.id, lock);
+
+      // Read the canonical values back from Supabase. A success message is shown only
+      // when the remote list has exactly the records that were just submitted.
+      await schoolData.loadFromCloud();
+      const persisted = schoolData.getOrCreateAttendanceSession(session.groupId, session.date);
+      const savedByStudent = new Map(persisted.records.map(record => [record.studentId, record]));
+      const savedCorrectly = records.length === persisted.records.length && records.every(record => {
+        const persistedRecord = savedByStudent.get(record.studentId);
+        return persistedRecord?.status === record.status && persistedRecord?.note === record.note;
+      });
+      if (!savedCorrectly) {
+        throw new Error('La base de datos devolvió una lista distinta de la que se intentó guardar.');
+      }
+
+      setSession(persisted.session);
+      setRecords(persisted.records);
       setIsSavedBanner(true);
       setIsDirty(false);
       onDataChanged();
     } catch (error) {
       console.error('Error al guardar la asistencia:', error);
-      setSaveError('No se pudo guardar la asistencia. Verifica tu conexión e inténtalo de nuevo.');
+      setSaveError('La asistencia no pudo verificarse en la nube. No se confirmó el guardado; verifica tu conexión e inténtalo de nuevo.');
     } finally {
       setIsSaving(false);
     }
@@ -231,7 +254,6 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
     onDataChanged();
   };
 
-  // Stats for the active session
   const totalInList = activeStudents.length;
   let countPresente = 0;
   let countFalta = 0;
@@ -254,7 +276,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Title Bar & Filter Row (Classic Desktop Form Controls) */}
+      {}
       <div className="rappi-card p-4 space-y-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2 border-b border-slate-200">
           <div className="flex items-center gap-2">
@@ -315,7 +337,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
           </div>
         </div>
 
-        {/* Group Selector & Date Picker Bar */}
+        {}
         {groups.length === 0 ? (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded text-amber-900 text-xs flex items-center justify-between">
             <span>No hay grupos registrados aún. Registre su primer grupo para poder iniciar el pase de lista.</span>
@@ -403,7 +425,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
         </div>
       )}
 
-      {/* Live Statistics Counter Bar */}
+      {}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="rappi-card p-3 text-center">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Presentes</span>
@@ -474,7 +496,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
                         </span>
                       </td>
 
-                      {/* Status Action Buttons with Strict Spec Color Coding */}
+                      {}
                       <td className="py-2 px-3 border-r border-slate-200">
                         <div className="flex items-center justify-center gap-1.5 flex-wrap">
                           {/* Presente */}
@@ -531,7 +553,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
                         </div>
                       </td>
 
-                      {/* Note / Justification column */}
+                      {}
                       <td className="py-2 px-3 hidden md:table-cell">
                         {activeNoteStudentId === student.id ? (
                           <div className="flex items-center gap-1.5">
