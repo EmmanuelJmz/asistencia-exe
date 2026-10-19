@@ -217,7 +217,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
         return persistedRecord?.status === record.status && persistedRecord?.note === record.note;
       });
       if (!savedCorrectly) {
-        throw new Error('La base de datos devolvió una lista distinta de la que se intentó guardar.');
+        throw new Error(`Supabase devolvió ${persisted.records.length} de ${records.length} registros esperados para esta lista.`);
       }
 
       setSession(persisted.session);
@@ -227,7 +227,8 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
       onDataChanged();
     } catch (error) {
       console.error('Error al guardar la asistencia:', error);
-      setSaveError('La asistencia no pudo verificarse en la nube. No se confirmó el guardado; verifica tu conexión e inténtalo de nuevo.');
+      const detail = error instanceof Error ? error.message : 'Error desconocido al consultar Supabase.';
+      setSaveError(`La asistencia no pudo verificarse en la nube. ${detail}`);
     } finally {
       setIsSaving(false);
     }
