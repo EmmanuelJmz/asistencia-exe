@@ -217,7 +217,10 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
         return persistedRecord?.status === record.status && persistedRecord?.note === record.note;
       });
       if (!savedCorrectly) {
-        throw new Error(`Supabase devolvió ${persisted.records.length} de ${records.length} registros esperados para esta lista.`);
+        throw new Error(
+          `Supabase devolvió ${persisted.records.length} de ${records.length} registros esperados ` +
+          `(sesión: ${session.id}; grupo: ${session.groupId}).`
+        );
       }
 
       setSession(persisted.session);
