@@ -1,14 +1,29 @@
 import { supabase } from './supabaseClient';
 
 class SupabaseSchoolRepository {
+  private async fetchAllAttendanceRecords() {
+    const pageSize = 1_000;
+    const records: unknown[] = [];
+
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .order('id', { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (error || !data) return { data: null, error };
+      records.push(...data);
+      if (data.length < pageSize) return { data: records, error: null };
+    }
+  }
+
   fetchAllTables() {
     return Promise.all([
       supabase.from('groups').select('*'),
       supabase.from('students').select('*'),
       supabase.from('attendance_sessions').select('*'),
-      // Attendance history is loaded as a complete set. An explicit range avoids a
-      // backend/default pagination limit silently making a complete roll call appear incomplete.
-      supabase.from('attendance_records').select('*').range(0, 9_999),
+      this.fetchAllAttendanceRecords(),
       supabase.from('subjects').select('*'),
       supabase.from('periods').select('*'),
       supabase.from('activities').select('*'),
