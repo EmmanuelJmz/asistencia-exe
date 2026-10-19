@@ -53,6 +53,8 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [isSavedBanner, setIsSavedBanner] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [activeNoteStudentId, setActiveNoteStudentId] = useState<string | null>(null);
   const [tempNoteText, setTempNoteText] = useState('');
 
@@ -169,28 +171,43 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
     setIsDirty(true);
   };
 
-  const handleClearAttendance = () => {
+  const handleClearAttendance = async () => {
     if (!session || records.length === 0) return;
     if (!window.confirm(`¿Desea limpiar toda la asistencia de ${activeGroup?.name || 'este grupo'} para el ${selectedDate}? Esta acción se aplicará al guardar.`)) return;
     if (session.isLocked) {
-      const reopenedSession = schoolData.commitAttendanceSave(session.id, false);
-      setSession(reopenedSession);
+      try {
+        setIsSaving(true);
+        const reopenedSession = await schoolData.commitAttendanceSave(session.id, false);
+        setSession(reopenedSession);
+      } catch (error) {
+        console.error('Error al desbloquear la sesión de asistencia:', error);
+        setSaveError('No se pudo desbloquear la lista. Verifica tu conexión e inténtalo de nuevo.');
+        return;
+      } finally {
+        setIsSaving(false);
+      }
     }
     setRecords([]);
     setIsDirty(true);
   };
 
-  const handleSaveAndLock = (lock: boolean) => {
-    if (!session) return;
-    if (isDirty) schoolData.saveAttendanceRecords(session.id, records);
-    const updatedSession = schoolData.commitAttendanceSave(session.id, lock);
-    setSession(updatedSession);
-    setIsSavedBanner(true);
-    setIsDirty(false);
-    onDataChanged();
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
+  const handleSaveAndLock = async (lock: boolean) => {
+    if (!session || isSaving) return;
+    try {
+      setIsSaving(true);
+      setSaveError(null);
+      if (isDirty) await schoolData.saveAttendanceRecords(session.id, records);
+      const updatedSession = await schoolData.commitAttendanceSave(session.id, lock);
+      setSession(updatedSession);
+      setIsSavedBanner(true);
+      setIsDirty(false);
+      onDataChanged();
+    } catch (error) {
+      console.error('Error al guardar la asistencia:', error);
+      setSaveError('No se pudo guardar la asistencia. Verifica tu conexión e inténtalo de nuevo.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveNote = (studentId: string) => {
@@ -258,6 +275,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
             {records.length > 0 && (
               <button
                 onClick={handleClearAttendance}
+                disabled={isSaving}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-50 hover:bg-red-100 text-red-800 border border-red-300 text-xs font-semibold transition-colors"
                 title="Quitar todos los registros de esta lista"
               >
@@ -267,7 +285,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
             )}
             <button
               onClick={handleMarkAllPresent}
-              disabled={session?.isLocked || activeStudents.length === 0}
+              disabled={session?.isLocked || activeStudents.length === 0 || isSaving}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-semibold shadow-xs transition-colors"
             >
               <CheckCheck className="w-3.5 h-3.5" />
@@ -277,6 +295,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
             {session?.isLocked ? (
               <button
                 onClick={() => handleSaveAndLock(false)}
+                disabled={isSaving}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-semibold transition-colors"
                 title="Desbloquear para permitir ediciones"
               >
@@ -286,7 +305,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
             ) : (
               <button
                 onClick={() => handleSaveAndLock(true)}
-                disabled={activeStudents.length === 0}
+                disabled={activeStudents.length === 0 || isSaving}
                 className="flex items-center gap-1.5 px-4 py-2 rappi-btn-primary text-xs"
               >
                 <Lock className="w-3.5 h-3.5" />
@@ -377,6 +396,13 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
         </div>
       )}
 
+      {saveError && (
+        <div className="p-2.5 rounded bg-red-50 border border-red-300 text-red-900 text-xs flex items-center justify-center gap-2 shadow-xs">
+          <AlertCircle className="w-4 h-4 text-red-600" />
+          <span className="font-medium">{saveError}</span>
+        </div>
+      )}
+
       {/* Live Statistics Counter Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="rappi-card p-3 text-center">
@@ -454,7 +480,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
                           {/* Presente */}
                           <button
                             onClick={() => handleSetStatus(student.id, 'Presente')}
-                            disabled={session?.isLocked}
+                            disabled={session?.isLocked || isSaving}
                             className={`px-2.5 py-1 rounded text-xs font-bold transition-all border ${
                               currentStatus === 'Presente'
                                 ? 'bg-[#D1FAE5] text-[#10B981] border-[#10B981] shadow-xs'
@@ -467,7 +493,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
                           {/* Falta */}
                           <button
                             onClick={() => handleSetStatus(student.id, 'Falta')}
-                            disabled={session?.isLocked}
+                            disabled={session?.isLocked || isSaving}
                             className={`px-2.5 py-1 rounded text-xs font-bold transition-all border ${
                               currentStatus === 'Falta'
                                 ? 'bg-[#FEE2E2] text-[#EF4444] border-[#EF4444] shadow-xs'
@@ -480,7 +506,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
                           {/* Retardo */}
                           <button
                             onClick={() => handleSetStatus(student.id, 'Retardo')}
-                            disabled={session?.isLocked}
+                            disabled={session?.isLocked || isSaving}
                             className={`px-2.5 py-1 rounded text-xs font-bold transition-all border ${
                               currentStatus === 'Retardo'
                                 ? 'bg-[#FEF3C7] text-[#F59E0B] border-[#F59E0B] shadow-xs'
@@ -493,7 +519,7 @@ export const AttendanceScreen: React.FC<AttendanceScreenProps> = ({
                           {/* Justificada */}
                           <button
                             onClick={() => handleSetStatus(student.id, 'Justificada')}
-                            disabled={session?.isLocked}
+                            disabled={session?.isLocked || isSaving}
                             className={`px-2.5 py-1 rounded text-xs font-bold transition-all border ${
                               currentStatus === 'Justificada'
                                 ? 'bg-[#E0E7FF] text-[#6366F1] border-[#6366F1] shadow-xs'

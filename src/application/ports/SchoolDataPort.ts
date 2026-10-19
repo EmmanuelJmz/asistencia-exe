@@ -45,8 +45,8 @@ export interface SchoolDataPort {
     session: AttendanceSession;
     records: AttendanceRecord[];
   };
-  commitAttendanceSave(sessionId: string, isLocked: boolean): AttendanceSession;
-  saveAttendanceRecords(sessionId: string, records: AttendanceRecord[]): void;
+  commitAttendanceSave(sessionId: string, isLocked: boolean): Promise<AttendanceSession>;
+  saveAttendanceRecords(sessionId: string, records: AttendanceRecord[]): Promise<void>;
 
   getSubjects(): Subject[];
   getPeriods(): Period[];

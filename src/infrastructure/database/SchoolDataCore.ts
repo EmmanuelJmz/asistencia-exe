@@ -140,12 +140,12 @@ export abstract class SchoolDataCore {
   }
 
 
-    protected upsert(table: string, data: unknown): void {
-    supabaseSchoolRepository.upsert(table, data);
+  protected upsert(table: string, data: unknown): Promise<void> {
+    return supabaseSchoolRepository.upsert(table, data);
   }
 
-  protected removeFromCloud(table: string, id: string): void {
-    supabaseSchoolRepository.delete(table, id);
+  protected removeFromCloud(table: string, id: string): Promise<void> {
+    return supabaseSchoolRepository.delete(table, id);
   }
 
 }

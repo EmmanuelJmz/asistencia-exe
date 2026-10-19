@@ -17,17 +17,17 @@ class SupabaseSchoolRepository {
     ]);
   }
 
-  upsert(table: string, data: unknown): void {
+  async upsert(table: string, data: unknown): Promise<void> {
     if (!import.meta.env.VITE_SUPABASE_URL) return;
 
-    supabase.from(table).upsert(data).then(({ error }) => {
-      if (error) console.error(`Error syncing ${table}:`, error);
-    });
+    const { error } = await supabase.from(table).upsert(data);
+    if (error) throw error;
   }
 
-  delete(table: string, id: string): void {
+  async delete(table: string, id: string): Promise<void> {
     if (!import.meta.env.VITE_SUPABASE_URL) return;
-    supabase.from(table).delete().eq('id', id).then();
+    const { error } = await supabase.from(table).delete().eq('id', id);
+    if (error) throw error;
   }
 }
 

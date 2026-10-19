@@ -44,29 +44,32 @@ export class AttendanceOperations extends StudentOperations {
       this.upsert('attendance_records', rec);
     });
   }
-  public saveAttendanceRecords(sessionId: string, records: AttendanceRecord[]): void {
+  public async saveAttendanceRecords(sessionId: string, records: AttendanceRecord[]): Promise<void> {
     const savedRecords = this.attendanceRecords.filter(record => record.sessionId === sessionId);
     const retainedIds = new Set(records.map(record => record.id));
-    savedRecords.filter(record => !retainedIds.has(record.id)).forEach(record => {
-      this.removeFromCloud('attendance_records', record.id);
-    });
-    this.attendanceRecords = this.attendanceRecords.filter(record => record.sessionId !== sessionId || retainedIds.has(record.id));
-    records.forEach(record => {
-      const existing = this.attendanceRecords.find(r => r.id === record.id);
-      if (existing) {
-        Object.assign(existing, record);
-      } else {
-        this.attendanceRecords.push(record);
-      }
-      this.upsert('attendance_records', record);
-    });
+    const recordsToRemove = savedRecords.filter(record => !retainedIds.has(record.id));
+    const session = this.sessions.find(item => item.id === sessionId);
+
+    // A record cannot be reliably persisted until its session exists remotely.
+    if (session) await this.upsert('attendance_sessions', session);
+    await Promise.all([
+      ...recordsToRemove.map(record => this.removeFromCloud('attendance_records', record.id)),
+      ...records.map(record => this.upsert('attendance_records', record)),
+    ]);
+
+    // Keep memory in sync only after the complete cloud operation succeeds, so a retry
+    // can still include any removals that failed to persist.
+    this.attendanceRecords = [
+      ...this.attendanceRecords.filter(record => record.sessionId !== sessionId),
+      ...records,
+    ];
   }
-  public commitAttendanceSave(sessionId: string, isLocked: boolean): AttendanceSession {
+  public async commitAttendanceSave(sessionId: string, isLocked: boolean): Promise<AttendanceSession> {
     const s = this.sessions.find(x => x.id === sessionId)!;
     if (s) {
       s.isLocked = isLocked;
       s.completedAt = new Date().toISOString();
-      this.upsert('attendance_sessions', s);
+      await this.upsert('attendance_sessions', s);
     }
     return s;
   }
