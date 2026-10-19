@@ -51,10 +51,11 @@ export class AttendanceOperations extends StudentOperations {
     const session = this.sessions.find(item => item.id === sessionId);
 
     if (session) await this.upsert('attendance_sessions', session);
-    await Promise.all([
-      ...recordsToRemove.map(record => this.removeFromCloud('attendance_records', record.id)),
-      ...records.map(record => this.upsert('attendance_records', record)),
-    ]);
+    await Promise.all(recordsToRemove.map(record => this.removeFromCloud('attendance_records', record.id)));
+
+    // Persist the complete roll call in one request. Sending one request per student
+    // allowed partial saves when several updates for the same session arrived together.
+    if (records.length > 0) await this.upsert('attendance_records', records);
 
     this.attendanceRecords = [
       ...this.attendanceRecords.filter(record => record.sessionId !== sessionId),
