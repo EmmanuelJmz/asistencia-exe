@@ -6,6 +6,15 @@ import {
 import { AttendanceOperations } from './AttendanceOperations';
 
 export class AcademicOperations extends AttendanceOperations {
+  private findGradeByStorageKey(studentId: string, groupId: string, category: GradeCategory, activityTitle: string): Grade | undefined {
+    return this.grades.find(grade =>
+      grade.studentId === studentId &&
+      grade.groupId === groupId &&
+      grade.category === category &&
+      grade.activityTitle === activityTitle,
+    );
+  }
+
 // ==================== SUBJECTS & PERIODS ====================
   public getSubjects(): Subject[] { return [...this.subjects]; }
   public getPeriods(): Period[] { return [...this.periods].sort((a, b) => a.orderIndex - b.orderIndex); }
@@ -16,8 +25,11 @@ export class AcademicOperations extends AttendanceOperations {
   }
   public getAllGradesForGroup(groupId: string): Grade[] { return this.grades.filter(g => g.groupId === groupId); }
   public setStudentScore(stuId: string, grpId: string, subId: string, perId: string, cat: GradeCategory, title: string, score: number, obs?: string, activityId?: string): Grade {
-    let grd = this.grades.find(g => g.studentId === stuId && g.groupId === grpId && (activityId ? g.activityId === activityId : (g.subjectId === subId && g.periodId === perId && g.activityTitle === title)));
+    let grd = this.findGradeByStorageKey(stuId, grpId, cat, title);
     if (grd) {
+      grd.subjectId = subId;
+      grd.periodId = perId;
+      grd.activityId = activityId;
       grd.score = score;
       if (obs !== undefined) grd.observation = obs;
       grd.updatedAt = new Date().toISOString();
@@ -58,9 +70,14 @@ export class AcademicOperations extends AttendanceOperations {
   public getActivityGrades(activityId: string): Grade[] { return this.grades.filter(g => g.activityId === activityId); }
   public saveActivityGrades(activityId: string, groupId: string, studentGrades: Array<{ studentId: string; score: number; observation?: string }>): void {
     const act = this.getActivityById(activityId);
+    const category = (act?.type as GradeCategory) || 'Trabajos';
+    const title = act?.title || '';
     studentGrades.forEach(sg => {
-      let grd = this.grades.find(g => g.activityId === activityId && g.studentId === sg.studentId);
+      let grd = this.findGradeByStorageKey(sg.studentId, groupId, category, title);
       if (grd) {
+        grd.activityId = activityId;
+        grd.subjectId = '';
+        grd.periodId = '';
         grd.score = sg.score;
         if(sg.observation !== undefined) grd.observation = sg.observation;
         grd.updatedAt = new Date().toISOString();
@@ -70,8 +87,8 @@ export class AcademicOperations extends AttendanceOperations {
           studentId: sg.studentId,
           groupId,
           activityId: activityId,
-          category: (act?.type as any) || 'Trabajos',
-          activityTitle: act?.title || '',
+          category,
+          activityTitle: title,
           score: sg.score,
           observation: sg.observation || '',
           subjectId: '',

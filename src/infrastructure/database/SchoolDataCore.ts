@@ -116,7 +116,6 @@ export abstract class SchoolDataCore {
         createdAt: new Date().toISOString()
       };
       this.groups.push(globalGrp);
-      supabaseSchoolRepository.upsert('groups', globalGrp);
     }
   }
 
